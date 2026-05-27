@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.24)
+
+function(collect_all_entries result_var dir_only base_dir)
+  SET(dir_list "")
+  IF (dir_only AND (IS_DIRECTORY ${base_dir}))
+    LIST(APPEND dir_list ${base_dir})
+  ENDIF()
+
+  FILE(GLOB entries "${base_dir}/*")
+
+  # MESSAGE(STATUS "for lookup dir:${base_dir}")
+
+  FOREACH(entry ${entries})
+    IF (dir_only)
+      IF(IS_DIRECTORY ${entry})
+        collect_all_entries(sub_dirs dir_only ${entry})
+        LIST(APPEND dir_list ${sub_dirs})
+      ENDIF()
+    ELSEIF(NOT ((IS_DIRECTORY ${entry}) OR (IS_SYMLINK ${entry})))
+        LIST(APPEND dir_list ${entry})
+    ENDIF()
+  ENDFOREACH()
+  # MESSAGE(STATUS "collect_all_entries:${dir_list}")
+  SET(${result_var} ${dir_list} PARENT_SCOPE)
+endfunction()

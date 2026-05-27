@@ -1,0 +1,1 @@
+./fastddsgen -typeros2 -d ./robotdds /home/huahui/ws_ros/robot_ethercat/include/robotdds/RobotData.idl

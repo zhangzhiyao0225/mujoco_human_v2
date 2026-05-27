@@ -1,0 +1,33 @@
+// Handle.idl
+
+struct Linear3D
+{
+    double x;
+    double y;
+    double z;
+};
+
+struct Angular3D
+{
+    double x;
+    double y;
+    double z;
+};
+
+// robot_cmd_vel
+struct Twist
+{
+    Linear3D linear;
+    Angular3D angular;
+};
+
+// robot_action
+struct ActCmd
+{
+    int32 act;
+};
+
+struct RobotNotification
+{
+    string data;
+};

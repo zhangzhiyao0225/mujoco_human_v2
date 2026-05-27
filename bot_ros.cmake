@@ -1,0 +1,182 @@
+cmake_minimum_required(VERSION 3.20)
+project(bitbot_efc)
+
+INCLUDE(options.cmake)
+
+FIND_PACKAGE(rclcpp REQUIRED)
+FIND_PACKAGE(sensor_msgs REQUIRED)
+FIND_PACKAGE(nav_msgs REQUIRED)
+FIND_PACKAGE(geometry_msgs REQUIRED)
+FIND_PACKAGE(std_msgs REQUIRED)
+
+SET(BITBOT_ROS_ROOT_DIR /opt/ros/humble)
+SET(BITBOT_ROS_INC_ROOT_DIR ${BITBOT_ROS_ROOT_DIR}/include)
+SET(BITBOT_ROS_INC_DIR
+    ${BITBOT_ROS_INC_ROOT_DIR}/actionlib_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/action_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/action_tutorials_interfaces
+    ${BITBOT_ROS_INC_ROOT_DIR}/ament_index_cpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/angles
+    ${BITBOT_ROS_INC_ROOT_DIR}/behaviortree_cpp_v3
+    ${BITBOT_ROS_INC_ROOT_DIR}/bond
+    ${BITBOT_ROS_INC_ROOT_DIR}/bondcpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/builtin_interfaces
+    ${BITBOT_ROS_INC_ROOT_DIR}/camera_calibration_parsers
+    ${BITBOT_ROS_INC_ROOT_DIR}/camera_info_manager
+    ${BITBOT_ROS_INC_ROOT_DIR}/class_loader
+    ${BITBOT_ROS_INC_ROOT_DIR}/composition_interfaces
+    ${BITBOT_ROS_INC_ROOT_DIR}/costmap_queue
+    ${BITBOT_ROS_INC_ROOT_DIR}/cv_bridge
+    ${BITBOT_ROS_INC_ROOT_DIR}/depthimage_to_laserscan
+    ${BITBOT_ROS_INC_ROOT_DIR}/diagnostic_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/diagnostic_updater
+    ${BITBOT_ROS_INC_ROOT_DIR}/dwb_core
+    ${BITBOT_ROS_INC_ROOT_DIR}/dwb_critics
+    ${BITBOT_ROS_INC_ROOT_DIR}/dwb_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/dwb_plugins
+    ${BITBOT_ROS_INC_ROOT_DIR}/example_interfaces
+    ${BITBOT_ROS_INC_ROOT_DIR}/fastcdr
+    ${BITBOT_ROS_INC_ROOT_DIR}/fastrtps
+    ${BITBOT_ROS_INC_ROOT_DIR}/foonathan_memory
+    ${BITBOT_ROS_INC_ROOT_DIR}/gazebo_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/gazebo_plugins
+    ${BITBOT_ROS_INC_ROOT_DIR}/gazebo_ros
+    ${BITBOT_ROS_INC_ROOT_DIR}/geometry_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/image_geometry
+    ${BITBOT_ROS_INC_ROOT_DIR}/image_tools
+    ${BITBOT_ROS_INC_ROOT_DIR}/image_transport
+    ${BITBOT_ROS_INC_ROOT_DIR}/interactive_markers
+    ${BITBOT_ROS_INC_ROOT_DIR}/intra_process_demo
+    ${BITBOT_ROS_INC_ROOT_DIR}/joy
+    ${BITBOT_ROS_INC_ROOT_DIR}/karto_sdk
+    ${BITBOT_ROS_INC_ROOT_DIR}/kdl_parser
+    ${BITBOT_ROS_INC_ROOT_DIR}/keyboard_handler
+    ${BITBOT_ROS_INC_ROOT_DIR}/laser_geometry
+    ${BITBOT_ROS_INC_ROOT_DIR}/libstatistics_collector
+    ${BITBOT_ROS_INC_ROOT_DIR}/libyaml_vendor
+    ${BITBOT_ROS_INC_ROOT_DIR}/lifecycle_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/logging_demo
+    ${BITBOT_ROS_INC_ROOT_DIR}/map_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/message_filters
+    ${BITBOT_ROS_INC_ROOT_DIR}/moodycamel
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_amcl
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_behaviors
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_behavior_tree
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_bt_navigator
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_collision_monitor
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_constrained_smoother
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_controller
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_core
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_costmap_2d
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav_2d_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav_2d_utils
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_lifecycle_manager
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_map_server
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_mppi_controller
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_navfn_planner
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_planner
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_regulated_pure_pursuit_controller
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_rotation_shim_controller
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_rviz_plugins
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_smac_planner
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_smoother
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_theta_star_planner
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_util
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_velocity_smoother
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_voxel_grid
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav2_waypoint_follower
+    ${BITBOT_ROS_INC_ROOT_DIR}/nav_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/ompl-1.6
+    ${BITBOT_ROS_INC_ROOT_DIR}/pcl_conversions
+    ${BITBOT_ROS_INC_ROOT_DIR}/pcl_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/pcl_ros
+    ${BITBOT_ROS_INC_ROOT_DIR}/pendulum_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/pluginlib
+    ${BITBOT_ROS_INC_ROOT_DIR}/qt_gui_cpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/rcl
+    ${BITBOT_ROS_INC_ROOT_DIR}/rcl_action
+    ${BITBOT_ROS_INC_ROOT_DIR}/rclcpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/rclcpp_action
+    ${BITBOT_ROS_INC_ROOT_DIR}/rclcpp_components
+    ${BITBOT_ROS_INC_ROOT_DIR}/rclcpp_lifecycle
+    ${BITBOT_ROS_INC_ROOT_DIR}/rcl_interfaces
+    ${BITBOT_ROS_INC_ROOT_DIR}/rcl_lifecycle
+    ${BITBOT_ROS_INC_ROOT_DIR}/rcl_logging_interface
+    ${BITBOT_ROS_INC_ROOT_DIR}/rcl_yaml_param_parser
+    ${BITBOT_ROS_INC_ROOT_DIR}/rcpputils
+    ${BITBOT_ROS_INC_ROOT_DIR}/rcutils
+    ${BITBOT_ROS_INC_ROOT_DIR}/rmw
+    ${BITBOT_ROS_INC_ROOT_DIR}/rmw_dds_common
+    ${BITBOT_ROS_INC_ROOT_DIR}/rmw_fastrtps_cpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/rmw_fastrtps_shared_cpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/robot_state_publisher
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosbag2_compression
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosbag2_compression_zstd
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosbag2_cpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosbag2_interfaces
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosbag2_storage
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosbag2_storage_default_plugins
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosbag2_transport
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosgraph_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosidl_runtime_c
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosidl_runtime_cpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosidl_typesupport_c
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosidl_typesupport_cpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosidl_typesupport_fastrtps_c
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosidl_typesupport_fastrtps_cpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosidl_typesupport_interface
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosidl_typesupport_introspection_c
+    ${BITBOT_ROS_INC_ROOT_DIR}/rosidl_typesupport_introspection_cpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/rqt_gui_cpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/rqt_image_view
+    ${BITBOT_ROS_INC_ROOT_DIR}/rttest
+    ${BITBOT_ROS_INC_ROOT_DIR}/rviz_common
+    ${BITBOT_ROS_INC_ROOT_DIR}/rviz_default_plugins
+    ${BITBOT_ROS_INC_ROOT_DIR}/rviz_rendering
+    ${BITBOT_ROS_INC_ROOT_DIR}/sensor_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/shape_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/slam_toolbox
+    ${BITBOT_ROS_INC_ROOT_DIR}/smclib
+    ${BITBOT_ROS_INC_ROOT_DIR}/statistics_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/std_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/std_srvs
+    ${BITBOT_ROS_INC_ROOT_DIR}/stereo_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/teleop_twist_joy
+    ${BITBOT_ROS_INC_ROOT_DIR}/test_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/tf2
+    ${BITBOT_ROS_INC_ROOT_DIR}/tf2_bullet
+    ${BITBOT_ROS_INC_ROOT_DIR}/tf2_eigen
+    ${BITBOT_ROS_INC_ROOT_DIR}/tf2_eigen_kdl
+    ${BITBOT_ROS_INC_ROOT_DIR}/tf2_geometry_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/tf2_kdl
+    ${BITBOT_ROS_INC_ROOT_DIR}/tf2_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/tf2_ros
+    ${BITBOT_ROS_INC_ROOT_DIR}/tf2_sensor_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/tlsf
+    ${BITBOT_ROS_INC_ROOT_DIR}/tlsf_cpp
+    ${BITBOT_ROS_INC_ROOT_DIR}/tracetools
+    ${BITBOT_ROS_INC_ROOT_DIR}/trajectory_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/turtlebot3_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/turtlesim
+    ${BITBOT_ROS_INC_ROOT_DIR}/unique_identifier_msgs
+    ${BITBOT_ROS_INC_ROOT_DIR}/urdf
+    ${BITBOT_ROS_INC_ROOT_DIR}/urdfdom
+    ${BITBOT_ROS_INC_ROOT_DIR}/urdfdom_headers
+    ${BITBOT_ROS_INC_ROOT_DIR}/urdf_parser_plugin
+    ${BITBOT_ROS_INC_ROOT_DIR}/visualization_msgs
+)
+
+SET(BITBOT_ROS_LIBS 
+rclcpp
+sensor_msgs__rosidl_typesupport_cpp
+nav_msgs__rosidl_typesupport_cpp
+geometry_msgs__rosidl_typesupport_cpp
+libstatistics_collector
+rcl
+statistics_msgs__rosidl_typesupport_cpp
+tracetools
+rmw
+rcutils
+std_msgs__rosidl_typesupport_cpp
+)

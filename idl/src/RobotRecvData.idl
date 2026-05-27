@@ -1,0 +1,40 @@
+// RobotRecvData.idl
+struct MotorCommand
+{
+    // 1 enable
+    boolean enable;//代表当前数据是否有效
+    // Not used
+    uint32 mode;
+    uint32 ModelId;
+    float TargetVelocity;
+    float TargetPosition;
+    float TargetCurrent;
+    float TargetTorque;
+    float Kp;
+    float Kd;
+    // Not used
+    float CurrentLimit;
+    // Need to send zero_pos action before policy
+    // Need to kill all prog and restart them
+    // TODO
+    uint32 action;
+};
+struct ForceTorqueData
+{
+    boolean enable;//代表当前数据是否有效
+    float force_x;
+    float force_y;
+    float force_z;
+    float torque_x; 
+    float torque_y; 
+    float torque_z;
+};
+struct RobotControlCommand
+{
+    MotorCommand motors[24];//电机
+    ForceTorqueData force[2]; //力传感器
+    // Useless
+    boolean emergency_stop;//即停
+    boolean power_on;
+    uint64 timestamp;//时间辍
+};

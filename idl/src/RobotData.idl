@@ -1,0 +1,64 @@
+// RobotData.idl
+
+struct AlarmState
+{
+    boolean motor_overtemp[24];     // 各电机是否过温
+    boolean motor_comm_error[24];   // 通信异常
+    boolean motor_overcurrent[24];  // 过流
+    boolean battery_low;            // 电池低压
+    boolean imu_error;              // IMU 传感器异常
+    boolean system_fault;           // 系统级故障
+    uint32  error_code;             // 通用错误码
+};
+
+struct MotorState
+{
+    uint32 CanId;
+    uint32 EtherCatId;
+    uint32 ModelId;
+    int32 Direction;
+    uint32 JointMode;
+    float CurrentVelocity;
+    float TargetVelocity;
+    float CurrentPosition;
+    float TargetPosition;
+    float CurrentCurrent;
+    float TargetCurrent;
+    float TargetTorque;
+    float Kp;
+    float Kd;
+    float CurrentLimit;
+    float MotorTemperature;
+    float DriverTemperature;
+    float SettingsAcc;
+    float SettingsMagLinkGain;
+    float SettingsDisturbComp;
+    float Settings_FB_KP;
+    float Settings_FB_KD;
+};
+
+struct IMUData
+{
+    uint32 ImuId;
+    float Roll;
+    float Pitch;
+    float Yaw;
+    float A_x;
+    float A_y;
+    float A_z;
+    float W_x;
+    float W_y;
+    float W_z;
+    float ImuTemp;
+};
+
+struct RobotData
+{
+    MotorState motors[24];
+    // 1 hip
+    IMUData imu[2];
+    uint64 timestamp;
+    float battery_voltage;
+    boolean emergency_stop;
+    AlarmState alarms;
+};
