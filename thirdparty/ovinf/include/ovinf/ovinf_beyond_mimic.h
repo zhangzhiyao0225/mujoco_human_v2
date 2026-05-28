@@ -67,6 +67,8 @@ class BeyondMimicPolicy : public BasePolicy<float> {
 
   virtual void PrintInfo() final;
 
+  bool IsTrajectoryFinished(size_t margin = 2) const;
+
  private:
   void WorkerThread();
   void CreateLog(YAML::Node const &config);
@@ -97,6 +99,7 @@ class BeyondMimicPolicy : public BasePolicy<float> {
   float obs_scale_dof_pos_;
   float obs_scale_dof_vel_;
   float clip_action_;
+  bool auto_start_ = false;
 
   // Reference trajectory
   std::atomic_bool dancing_started_{false};

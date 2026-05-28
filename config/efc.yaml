@@ -607,6 +607,86 @@ RobotConfig:
         r_elbow_y: 0
         head_y: 0
 
+  policy_beyond_mimic:
+    controller_type: "BEYOND_MIMIC"
+    p_gains: *default_p_gains
+    d_gains: *default_d_gains
+    default_position: *defult_init_pos
+    decimation: 10
+    target_pos_filter: *default_target_pos_filter
+    inference:
+      policy_type: "BeyondMimic"
+      model_path: "/home/huahui/zzy/robot_control/mujoco_human_v2/checkpoint/efc/policy_bydm_25000.onnx"
+      device: "CPU"
+      control_period: 0.02
+      use_absolute_clock: true
+      auto_start: false
+      obs_buffer_size: 1
+      log_data: 1
+      log_dir: "/home/huahui/zzy/robot_control/mujoco_human_v2/log/policy"
+      log_name: "beyond_mimic"
+      realtime: false
+      stick_to_core: 5
+      single_obs_size: 124
+      action_size: 23
+      action_scale: 0.5
+      obs_scales:
+        ang_vel: 1.0
+        lin_vel: 1.0
+        command: 1.0
+        dof_pos: 1.0
+        dof_vel: 1.0
+        proj_gravity: 1.0
+      clip_action: 18.0
+      policy_joint_names:
+        - "l_hip_p"
+        - "r_hip_p"
+        - "waist_y"
+        - "l_hip_r"
+        - "r_hip_r"
+        - "l_shoulder_p"
+        - "r_shoulder_p"
+        - "l_hip_y"
+        - "r_hip_y"
+        - "l_shoulder_r"
+        - "r_shoulder_r"
+        - "l_knee"
+        - "r_knee"
+        - "l_shoulder_y"
+        - "r_shoulder_y"
+        - "l_ankle_p"
+        - "r_ankle_p"
+        - "l_elbow_p"
+        - "r_elbow_p"
+        - "l_ankle_r"
+        - "r_ankle_r"
+        - "l_elbow_y"
+        - "r_elbow_y"
+      policy_default_position:
+        l_hip_p: -0.3
+        r_hip_p: -0.3
+        waist_y: 0
+        l_hip_r: 0
+        r_hip_r: 0
+        l_shoulder_p: 0.3
+        r_shoulder_p: 0.3
+        l_hip_y: 0
+        r_hip_y: 0
+        l_shoulder_r: 0.1
+        r_shoulder_r: -0.1
+        l_knee: 0.6
+        r_knee: 0.6
+        l_shoulder_y: 0
+        r_shoulder_y: 0
+        l_ankle_p: -0.3
+        r_ankle_p: -0.3
+        l_elbow_p: -0.8
+        r_elbow_p: -0.8
+        l_ankle_r: 0
+        r_ankle_r: 0
+        l_elbow_y: 0
+        r_elbow_y: 0
+
   # policy_robust:
   #   controller_type: "AUTO"
   #   p_gains:

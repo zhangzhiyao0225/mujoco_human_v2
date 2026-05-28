@@ -6,6 +6,7 @@
 #include "policy_ctr_leg_waist.hpp"
 #include "policy_ctr_21dof.hpp"
 #include "policy_ctr_auto.hpp"
+#include "policy_ctr_beyond_mimic.hpp"
 
 namespace ovinf {
 
@@ -23,6 +24,8 @@ class PolicyControllerFactory {
       return std::make_shared<ovinf::PolicyCtr21DoF>(robot, config);
     } else if (controller_type == "AUTO") {
       return std::make_shared<ovinf::PolicyCtrAuto>(robot, config);
+    } else if (controller_type == "BEYOND_MIMIC") {
+      return std::make_shared<ovinf::PolicyCtrBeyondMimic>(robot, config);
     } else {
       throw std::invalid_argument("Unknown controller type: " +
                                   controller_type);

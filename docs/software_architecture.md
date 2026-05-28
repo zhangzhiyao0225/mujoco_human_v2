@@ -198,6 +198,7 @@ ROS_DOMAIN_ID=70 ros2 topic pub /robot_action std_msgs/msg/Int32 "{data: 1}" --o
 | 5 | `EnableRobustPolicy` | 切到 robust 策略。 |
 | 6 | `EnableWaveGreeting` | 切到挥手动作。 |
 | 7 | `EnableHandshakePolicy` | 切到握手动作。 |
+| 8 | `EnableBeyondMimicPolicy` | 切到 bydmimic / BeyondMimic 跳舞策略。 |
 
 也可以继续使用 backend 键盘/事件映射，具体看 `config/backend.json` 和 `user_func.hpp` 中注册的事件。
 
@@ -504,3 +505,22 @@ first DDS RobotControlCommand received
 | `config/efc.xml` | Bitbot kernel、DDS 和设备配置。 |
 | `config/efc.yaml` | 机器人、控制器、策略模型、PD 和日志配置。 |
 | `mj` | MuJoCo ROS2 节点和仿真模型目录。 |
+
+## 11. BeyondMimic 跳舞策略
+
+跳舞策略使用独立的 `BEYOND_MIMIC` controller，不走普通 `AUTO` controller。相关文件：
+
+| 文件 | 说明 |
+| --- | --- |
+| `include/efc/controller/policy_ctr_beyond_mimic.hpp` | BeyondMimic controller，负责组装 23 关节观测并写入目标关节。 |
+| `thirdparty/ovinf/src/ovinf/ovinf_beyond_mimic.cc` | BeyondMimic OpenVINO 推理和参考轨迹推进。 |
+| `config/efc.yaml` 的 `policy_beyond_mimic` | 跳舞策略配置。 |
+| `checkpoint/efc/policy_bydm_16500.onnx` | 当前默认跳舞模型。 |
+
+启动后发送：
+
+```bash
+ROS_DOMAIN_ID=70 ros2 topic pub /robot_action std_msgs/msg/Int32 "{data: 8}" --once
+```
+
+即可从当前策略切到 bydmimic 跳舞策略。默认配置 `auto_start: true`，切入策略后会自动开始动作；如果改成 `false`，则需要再给 `/robot_cmd_vel` 一个 `linear.x > 0.15` 的指令触发。

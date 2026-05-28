@@ -40,6 +40,7 @@ enum Events
   EnableRobustPolicy,
   EnableWaveGreeting,
   EnableHandshakePolicy,
+  EnableBeyondMimicPolicy,
   // EnableLocomotion21Policy,
   PolicySwitch,
 
@@ -78,6 +79,7 @@ static std::unordered_map<bitbot::EventValue, bitbot::EventId> s_key_2_evts =
         {5, static_cast<bitbot::EventId>(Events::EnableRobustPolicy)},
         {6, static_cast<bitbot::EventId>(Events::EnableWaveGreeting)},
         {7, static_cast<bitbot::EventId>(Events::EnableHandshakePolicy)},
+        {8, static_cast<bitbot::EventId>(Events::EnableBeyondMimicPolicy)},
         // {8, static_cast<bitbot::EventId>(Events::EnableLocomotion21Policy)},
 };
 
@@ -126,6 +128,9 @@ public:
     handshake_controller_ = std::make_shared<ovinf::HandshakeController>(
         robot_, config["RobotConfig"]["policy_standing"],
         config["RobotConfig"]["traditional_handshake"]);
+    beyond_mimic_controller_ =
+        ovinf::PolicyControllerFactory::CreatePolicyController(
+            robot_, config["RobotConfig"]["policy_beyond_mimic"]);
     // locomotion21_controller_ = ovinf::PolicyControllerFactory::CreatePolicyController(
     //     robot_, config["RobotConfig"]["policy_robust"]);
     current_policy_controller_ = standing_controller_;
@@ -247,6 +252,22 @@ public:
           }
           logger_->info("Enabling handshake policy");
           target_policy_controller_ = handshake_controller_;
+          target_policy_controller_->Init();
+          return static_cast<bitbot::StateId>(States::PolicySwitching);
+        });
+
+    kernel_.RegisterEvent(
+        "enable_beyond_mimic_policy",
+        static_cast<bitbot::EventId>(Events::EnableBeyondMimicPolicy),
+        [this](bitbot::EventValue, UserData &)
+        {
+          if (current_policy_controller_ == beyond_mimic_controller_)
+          {
+            logger_->warn("BeyondMimic dance policy is already enabled");
+            return static_cast<bitbot::StateId>(States::PolicyRunning);
+          }
+          logger_->info("Enabling BeyondMimic dance policy");
+          target_policy_controller_ = beyond_mimic_controller_;
           target_policy_controller_->Init();
           return static_cast<bitbot::StateId>(States::PolicySwitching);
         });
@@ -456,6 +477,7 @@ public:
             Events::EnableRobustPolicy,
             Events::EnableWaveGreeting,
             Events::EnableHandshakePolicy,
+            Events::EnableBeyondMimicPolicy,
             // Events::EnableLocomotion21Policy,
             static_cast<bitbot::EventId>(bitbot::KernelEvent::STOP),
         });
@@ -610,6 +632,7 @@ private:
   ovinf::PolicyControllerBase::Ptr robust_controller_ = nullptr;
   ovinf::PolicyControllerBase::Ptr wave_greeting_controller_ = nullptr;
   ovinf::PolicyControllerBase::Ptr handshake_controller_ = nullptr;
+  ovinf::PolicyControllerBase::Ptr beyond_mimic_controller_ = nullptr;
   // ovinf::PolicyControllerBase::Ptr locomotion21_controller_ = nullptr;
   ovinf::PolicyControllerBase::Ptr current_policy_controller_ = nullptr;
   ovinf::PolicyControllerBase::Ptr target_policy_controller_ = nullptr;

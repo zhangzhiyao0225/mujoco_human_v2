@@ -1,5 +1,7 @@
 #include "ovinf/ovinf_beyond_mimic.h"
 
+#include <limits>
+
 namespace ovinf {
 
 BeyondMimicPolicy::~BeyondMimicPolicy() {
@@ -29,6 +31,7 @@ BeyondMimicPolicy::BeyondMimicPolicy(const YAML::Node &config)
   obs_scale_dof_pos_ = config["obs_scales"]["dof_pos"].as<float>();
   obs_scale_dof_vel_ = config["obs_scales"]["dof_vel"].as<float>();
   clip_action_ = config["clip_action"].as<float>();
+  auto_start_ = config["auto_start"].as<bool>(false);
   joint_default_position_ = VectorT(joint_names_.size());
   stick_to_core_ = config["stick_to_core"].as<size_t>();
   log_name_ = config["log_name"].as<std::string>();
@@ -40,7 +43,7 @@ BeyondMimicPolicy::BeyondMimicPolicy(const YAML::Node &config)
 
   // Create buffer
   last_action_ = VectorT(action_size_).setZero();
-  latest_target_ = VectorT(action_size_).setZero();
+  latest_target_ = joint_default_position_;
 
   // Create logger
   log_flag_ = config["log_data"].as<uint32_t>() ? true : false;
@@ -59,13 +62,29 @@ BeyondMimicPolicy::BeyondMimicPolicy(const YAML::Node &config)
 
   // Get Trajectory Info
   dancing_started_.store(false);
-  auto rt_info = model->get_rt_info();
-  for (const auto &info : rt_info) {
-    for (const auto &pair : info.second.as<ov::AnyMap>()) {
-      if (pair.first == "traj_length") {
-        traj_length_ = pair.second.as<size_t>();
+  if (config["traj_length"]) {
+    traj_length_ = config["traj_length"].as<size_t>();
+  }
+  try {
+    auto rt_info = model->get_rt_info();
+    auto direct = rt_info.find("traj_length");
+    if (direct != rt_info.end()) {
+      traj_length_ = direct->second.as<size_t>();
+    }
+    for (const auto &info : rt_info) {
+      try {
+        for (const auto &pair : info.second.as<ov::AnyMap>()) {
+          if (pair.first == "traj_length") {
+            traj_length_ = pair.second.as<size_t>();
+          }
+        }
+      } catch (...) {
       }
     }
+  } catch (...) {
+  }
+  if (traj_length_ == 0) {
+    traj_length_ = std::numeric_limits<size_t>::max();
   }
 
   infer_request_ = compiled_model_.create_infer_request();
@@ -86,6 +105,11 @@ bool BeyondMimicPolicy::WarmUp(RobotObservation<float> const &obs_pack) {
   obs.setZero();
   timestep_input_ = 0.0;
   dancing_started_.store(false);
+  last_action_ = VectorT(action_size_).setZero();
+  latest_target_ = joint_default_position_;
+  ref_joint_pos_ = joint_default_position_;
+  ref_joint_vel_ = VectorT::Zero(action_size_);
+  ref_base_quat_ = QuaternionT::Identity();
 
   if (!inference_done_.load()) {
     return false;
@@ -119,10 +143,13 @@ bool BeyondMimicPolicy::InferUnsync(RobotObservation<float> const &obs_pack) {
   VectorT obs(single_obs_size_);
   obs.setZero();
 
-  if (obs_pack.command(0, 0) > 0.15f && !dancing_started_.load()) {
+  if ((auto_start_ || obs_pack.command(0, 0) > 0.15f) &&
+      !dancing_started_.load()) {
     dancing_started_.store(true);
     timestep_input_ = 0.0;
-  } else if (timestep_input_ < traj_length_ - 1 && dancing_started_.load()) {
+  } else if (dancing_started_.load() &&
+             (traj_length_ == std::numeric_limits<size_t>::max() ||
+              timestep_input_ < static_cast<float>(traj_length_ - 1))) {
     timestep_input_ += 1.0;
   } else {
     timestep_input_ = 0.0;
@@ -220,6 +247,16 @@ void BeyondMimicPolicy::PrintInfo() {
   for (const auto &pair : joint_names_) {
     std::cout << "  - " << pair.first << ": " << pair.second << std::endl;
   }
+}
+
+bool BeyondMimicPolicy::IsTrajectoryFinished(size_t margin) const {
+  if (traj_length_ == std::numeric_limits<size_t>::max() || traj_length_ <= margin + 1) {
+    return false;
+  }
+  if (!dancing_started_.load()) {
+    return false;
+  }
+  return timestep_input_ >= static_cast<float>(traj_length_ - 1 - margin);
 }
 
 void BeyondMimicPolicy::WorkerThread() {
