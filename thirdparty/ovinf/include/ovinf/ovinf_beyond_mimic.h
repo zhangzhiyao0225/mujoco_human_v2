@@ -68,6 +68,7 @@ class BeyondMimicPolicy : public BasePolicy<float> {
   virtual void PrintInfo() final;
 
   bool IsTrajectoryFinished(size_t margin = 2) const;
+  float CurrentTimestep() const { return timestep_input_; }
 
  private:
   void WorkerThread();
@@ -100,6 +101,7 @@ class BeyondMimicPolicy : public BasePolicy<float> {
   float obs_scale_dof_vel_;
   float clip_action_;
   bool auto_start_ = false;
+  size_t startup_timestep_offset_ = 0;
 
   // Reference trajectory
   std::atomic_bool dancing_started_{false};

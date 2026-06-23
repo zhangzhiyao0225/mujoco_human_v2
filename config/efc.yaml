@@ -241,17 +241,17 @@ RobotConfig:
   init_pos:
     duration: 1.5
     init_position: &defult_init_pos
-      l_hip_p: -0.3
+      l_hip_p: -0.25
       l_hip_r: 0
       l_hip_y: 0
-      l_knee: 0.6
-      l_ankle_p: -0.3
+      l_knee: 0.5
+      l_ankle_p: -0.25
       l_ankle_r: 0
-      r_hip_p: -0.3
+      r_hip_p: -0.25
       r_hip_r: 0
       r_hip_y: 0
-      r_knee: 0.6
-      r_ankle_p: -0.3
+      r_knee: 0.5
+      r_ankle_p: -0.25
       r_ankle_r: 0
       waist_y: 0
       l_shoulder_p: 0.3
@@ -614,13 +614,28 @@ RobotConfig:
     default_position: *defult_init_pos
     decimation: 10
     target_pos_filter: *default_target_pos_filter
+    # safety_clamp:
+    #   knee_min: -0.08
+    #   knee_max: 2.45
+    #   waist_y_min: -0.45
+    #   waist_y_max: 0.95
+    #   hip_roll_abs: 1.30
+    #   hip_yaw_abs: 1.25
+    #   ankle_pitch_min: -0.95
+    #   ankle_pitch_max: 0.70
+    #   ankle_roll_abs: 0.90
     inference:
       policy_type: "BeyondMimic"
-      model_path: "/home/huahui/zzy/robot_control/mujoco_human_v2/checkpoint/efc/policy_bydm_25000.onnx"
+      # model_path: "/home/huahui/zzy/robot_control/mujoco_human_v2/checkpoint/efc/policy_bydm_24000.onnx"
+      model_path: "/home/huahui/zzy/robot_control/mujoco_human_v2/checkpoint/efc/policy_getup_28001.onnx"
       device: "CPU"
       control_period: 0.02
       use_absolute_clock: true
-      auto_start: false
+      auto_start: true
+      startup_blend_time: 0.0
+      startup_timestep_offset: 0
+      finish_margin: 20
+      # traj_length: 1600
       obs_buffer_size: 1
       log_data: 1
       log_dir: "/home/huahui/zzy/robot_control/mujoco_human_v2/log/policy"
@@ -629,7 +644,7 @@ RobotConfig:
       stick_to_core: 5
       single_obs_size: 124
       action_size: 23
-      action_scale: 0.5
+      action_scale: 0.25
       obs_scales:
         ang_vel: 1.0
         lin_vel: 1.0
@@ -662,30 +677,54 @@ RobotConfig:
         - "r_ankle_r"
         - "l_elbow_y"
         - "r_elbow_y"
+      # policy_default_position:
+      #   l_hip_p: -0.25
+      #   r_hip_p: -0.25
+      #   waist_y: 0
+      #   l_hip_r: 0
+      #   r_hip_r: 0
+      #   l_shoulder_p: 0.3
+      #   r_shoulder_p: 0.3
+      #   l_hip_y: 0
+      #   r_hip_y: 0
+      #   l_shoulder_r: 0.1
+      #   r_shoulder_r: -0.1
+      #   l_knee: 0.5
+      #   r_knee: 0.5
+      #   l_shoulder_y: 0
+      #   r_shoulder_y: 0
+      #   l_ankle_p: -0.25
+      #   r_ankle_p: -0.25
+      #   l_elbow_p: -0.8
+      #   r_elbow_p: -0.8
+      #   l_ankle_r: 0
+      #   r_ankle_r: 0
+      #   l_elbow_y: 0
+      #   r_elbow_y: 0
       policy_default_position:
         l_hip_p: -0.3
         r_hip_p: -0.3
-        waist_y: 0
-        l_hip_r: 0
-        r_hip_r: 0
+        waist_y: 0.0
+        l_hip_r: 0.0
+        r_hip_r: 0.0
         l_shoulder_p: 0.3
         r_shoulder_p: 0.3
-        l_hip_y: 0
-        r_hip_y: 0
+        l_hip_y: 0.0
+        r_hip_y: 0.0
         l_shoulder_r: 0.1
         r_shoulder_r: -0.1
         l_knee: 0.6
         r_knee: 0.6
-        l_shoulder_y: 0
-        r_shoulder_y: 0
+        l_shoulder_y: 0.0
+        r_shoulder_y: 0.0
         l_ankle_p: -0.3
         r_ankle_p: -0.3
         l_elbow_p: -0.8
         r_elbow_p: -0.8
-        l_ankle_r: 0
-        r_ankle_r: 0
-        l_elbow_y: 0
-        r_elbow_y: 0
+        l_ankle_r: 0.0
+        r_ankle_r: 0.0
+        l_elbow_y: 0.0
+        r_elbow_y: 0.0
 
   # policy_robust:
   #   controller_type: "AUTO"
@@ -818,7 +857,6 @@ RobotConfig:
   #       r_ankle_r: 0
   #       l_elbow_y: 0
   #       r_elbow_y: 0
-
 
   policy_robust:
     controller_type: "AUTO"
@@ -1069,5 +1107,3 @@ RobotConfig:
   #       r_ankle_p: -0.3
   #       r_ankle_r: 0
   #       waist_y: 0
-  #
-  #

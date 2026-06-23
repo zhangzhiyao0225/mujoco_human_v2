@@ -13,6 +13,8 @@ MujocoMsgHandler::MujocoMsgHandler(mj::Simulate* sim)
 {
     model_param_name = name_prefix + "model_file";
     this->declare_parameter(model_param_name, "");
+    actuator_cmd_timeout_ = std::chrono::milliseconds(
+        this->declare_parameter<int>("actuator_cmd_timeout_ms", 200));
 
     // reset_service_ = this->create_service<communication::srv::SimulationReset>(
     //     name_prefix + "sim_reset",
@@ -25,6 +27,7 @@ MujocoMsgHandler::MujocoMsgHandler(mj::Simulate* sim)
     mujoco_msg_publisher_ = this->create_publisher<custom_msgs::msg::MujocoMsg>("mujoco_msg", qos);
 
     timers_.emplace_back(this->create_wall_timer(1ms, std::bind(&MujocoMsgHandler::publish_mujoco_callback, this)));
+    timers_.emplace_back(this->create_wall_timer(20ms, std::bind(&MujocoMsgHandler::drop_old_message, this)));
 
     // timers_.emplace_back(this->create_wall_timer(
     //     1ms, std::bind(&MujocoMsgHandler::joint_callback, this)));
@@ -287,23 +290,36 @@ void MujocoMsgHandler::joint_callback()
     }
 }
 
-void MujocoMsgHandler::actuator_cmd_callback(const custom_msgs::msg::ActuatorCmds::SharedPtr msg) const
+void MujocoMsgHandler::actuator_cmd_callback(const custom_msgs::msg::ActuatorCmds::SharedPtr msg)
 {
     if (!sim_ || !sim_->d_ || !sim_->m_)
     {
         return;
     }
 
-    for (size_t k = 0; k < msg->actuators_name.size(); k++)
+    const size_t command_count = std::min(
+        {msg->actuators_name.size(), msg->pos.size(), msg->vel.size(),
+         msg->kp.size(), msg->kd.size(), msg->torque.size(),
+         msg->torque_limit.size()});
+    if (command_count != msg->actuators_name.size())
+    {
+        RCLCPP_WARN(
+            this->get_logger(),
+            "Ignoring incomplete actuator command entries: names=%zu, complete=%zu",
+            msg->actuators_name.size(), command_count);
+    }
+
+    const std::unique_lock<std::recursive_mutex> lock(sim_->mtx);
+    for (size_t k = 0; k < command_count; k++)
     {
         const std::string& actuator_name = msg->actuators_name[k];
         int actuator_id = mj_name2id(sim_->m_, mjOBJ_ACTUATOR, actuator_name.c_str());
         int joint_id = mj_name2id(sim_->m_, mjOBJ_JOINT, actuator_name.c_str());
 
-        if (actuator_id == -1)
+        if (actuator_id == -1 || joint_id == -1)
         {
             RCLCPP_WARN(
-                rclcpp::get_logger("MuJoCo"), "Actuator '%s' not found in MuJoCo model.", actuator_name.c_str());
+                this->get_logger(), "Actuator or joint '%s' not found in MuJoCo model.", actuator_name.c_str());
             continue;
         }
         // Get the joint position and velocity directly from qpos and qvel
@@ -320,6 +336,9 @@ void MujocoMsgHandler::actuator_cmd_callback(const custom_msgs::msg::ActuatorCmd
         double torque_limit = msg->torque_limit[k];
         sim_->d_->ctrl[actuator_id] = std::clamp(sim_->d_->ctrl[actuator_id], -torque_limit, torque_limit);
     }
+
+    last_actuator_cmd_time_ = std::chrono::steady_clock::now();
+    has_actuator_cmd_ = true;
 }
 
 void MujocoMsgHandler::parameter_callback(const rclcpp::Parameter&)
@@ -328,6 +347,24 @@ void MujocoMsgHandler::parameter_callback(const rclcpp::Parameter&)
 
 void MujocoMsgHandler::drop_old_message()
 {
+    if (!has_actuator_cmd_ ||
+        std::chrono::steady_clock::now() - last_actuator_cmd_time_ <= actuator_cmd_timeout_)
+    {
+        return;
+    }
+
+    if (!sim_ || !sim_->d_ || !sim_->m_)
+    {
+        return;
+    }
+
+    const std::unique_lock<std::recursive_mutex> lock(sim_->mtx);
+    std::fill(sim_->d_->ctrl, sim_->d_->ctrl + sim_->m_->nu, 0.0);
+    has_actuator_cmd_ = false;
+    RCLCPP_WARN(
+        this->get_logger(),
+        "No actuator command for %ld ms; cleared all MuJoCo controls.",
+        actuator_cmd_timeout_.count());
 }
 
 void MujocoMsgHandler::sim_msg_callback(const custom_msgs::msg::ToSimMsg::SharedPtr msg)

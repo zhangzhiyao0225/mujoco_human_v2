@@ -18,7 +18,7 @@ HumanoidStandPolicy::HumanoidStandPolicy(const YAML::Node &config)
   }
 
   cycle_time_ = config["cycle_time"].as<float>();
-  stand_threshold_ = config["stand_threshold"].as<float>();
+  stand_threshold_ = config["stand_threshold"].as<float>(0.045f);
   single_obs_size_ = config["single_obs_size"].as<size_t>();
   obs_buffer_size_ = config["obs_buffer_size"].as<size_t>();
   action_size_ = config["action_size"].as<size_t>();

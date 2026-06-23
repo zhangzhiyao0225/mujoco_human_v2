@@ -13,6 +13,7 @@
 
 #include <rmw/types.h>
 
+#include <chrono>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
@@ -60,7 +61,7 @@ private:
 
     void joint_callback();
 
-    void actuator_cmd_callback(const custom_msgs::msg::ActuatorCmds::SharedPtr msg) const;
+    void actuator_cmd_callback(const custom_msgs::msg::ActuatorCmds::SharedPtr msg);
 
     void parameter_callback(const rclcpp::Parameter&);
 
@@ -83,6 +84,10 @@ private:
     std::shared_ptr<rclcpp::ParameterEventHandler> param_subscriber_;
 
     std::shared_ptr<rclcpp::ParameterCallbackHandle> cb_handle_;
+
+    std::chrono::steady_clock::time_point last_actuator_cmd_time_;
+    std::chrono::milliseconds actuator_cmd_timeout_{200};
+    bool has_actuator_cmd_{false};
 
     std::thread spin_thread;
 };

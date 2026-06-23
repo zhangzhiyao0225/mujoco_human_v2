@@ -32,6 +32,7 @@ BeyondMimicPolicy::BeyondMimicPolicy(const YAML::Node &config)
   obs_scale_dof_vel_ = config["obs_scales"]["dof_vel"].as<float>();
   clip_action_ = config["clip_action"].as<float>();
   auto_start_ = config["auto_start"].as<bool>(false);
+  startup_timestep_offset_ = config["startup_timestep_offset"].as<size_t>(0);
   joint_default_position_ = VectorT(joint_names_.size());
   stick_to_core_ = config["stick_to_core"].as<size_t>();
   log_name_ = config["log_name"].as<std::string>();
@@ -146,13 +147,16 @@ bool BeyondMimicPolicy::InferUnsync(RobotObservation<float> const &obs_pack) {
   if ((auto_start_ || obs_pack.command(0, 0) > 0.15f) &&
       !dancing_started_.load()) {
     dancing_started_.store(true);
-    timestep_input_ = 0.0;
+    timestep_input_ = static_cast<float>(startup_timestep_offset_);
   } else if (dancing_started_.load() &&
              (traj_length_ == std::numeric_limits<size_t>::max() ||
               timestep_input_ < static_cast<float>(traj_length_ - 1))) {
     timestep_input_ += 1.0;
+  } else if (dancing_started_.load() &&
+             traj_length_ != std::numeric_limits<size_t>::max()) {
+    timestep_input_ = static_cast<float>(traj_length_ - 1);
   } else {
-    timestep_input_ = 0.0;
+    timestep_input_ = static_cast<float>(startup_timestep_offset_);
 
     // Get yaw bias
     init_q_yaw_ = AngleAxisT(obs_pack.euler_angles(2), Vector3T::UnitZ());
@@ -236,6 +240,8 @@ void BeyondMimicPolicy::PrintInfo() {
   std::cout << "Single obs size: " << single_obs_size_ << std::endl;
   std::cout << "Action size: " << action_size_ << std::endl;
   std::cout << "Action scale: " << action_scale_ << std::endl;
+  std::cout << "Startup timestep offset: " << startup_timestep_offset_
+            << std::endl;
   std::cout << "  - Obs scale ang vel: " << obs_scale_ang_vel_ << std::endl;
   std::cout << "  - Obs scale command: " << obs_scale_command_ << std::endl;
   std::cout << "  - Obs scale dof pos: " << obs_scale_dof_pos_ << std::endl;
@@ -347,6 +353,7 @@ void BeyondMimicPolicy::CreateLog(YAML::Node const &config) {
   headers.push_back("prog_gravity_x");
   headers.push_back("prog_gravity_y");
   headers.push_back("prog_gravity_z");
+  headers.push_back("timestep");
   headers.push_back("inference_time_ms");
 
   csv_logger_ = std::make_shared<CsvLogger>(logger_file, headers);
@@ -373,6 +380,7 @@ void BeyondMimicPolicy::WriteLog(RobotObservation<float> const &obs_pack) {
   for (size_t i = 0; i < 3; ++i) {
     datas.push_back(obs_pack.proj_gravity(i));
   }
+  datas.push_back(timestep_input_);
   datas.push_back(inference_time_);
 
   csv_logger_->Write(datas);

@@ -73,8 +73,8 @@ private:
   std::string joint_state_topic_{"joint_states"};
   std::string imu_topic_{"imu_data"};
   std::string actuator_cmd_topic_{"actuators_cmds"};
-  int robot_data_domain_id_{60};
-  int robot_command_domain_id_{50};
+  int robot_data_domain_id_{65};
+  int robot_command_domain_id_{55};
 
   std::thread ros_spin_thread_;
   std::thread dds_command_thread_;

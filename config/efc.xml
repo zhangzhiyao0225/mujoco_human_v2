@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <bitbot>
 	<logger path="/home/huahui/zzy/robot_control/mujoco_human_v2/log" level="debug"/>
-  <publisher domain_id="50" participant_name="Participant_Publisher"
+  <publisher domain_id="55" participant_name="Participant_Publisher"
             topic_name="RobotControlCommandTopic" />
-  <subscriber domain_id="60" participant_name="Participant_Subscriber"
+  <subscriber domain_id="65" participant_name="Participant_Subscriber"
             topic_name="RobotDataTopic" />
   <dds>
     <handop>
@@ -23,81 +23,81 @@
   <bus>
     <device id="0" type="EfcJoint" name="l_hip_p"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="12" current_lim="100" />
+            enable="true" mode="PFH" model_id="12" current_lim="200" />
     <device id="1" type="EfcJoint" name="l_hip_r"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="13" current_lim="100" />
+            enable="true" mode="PFH" model_id="13" current_lim="200" />
     <device id="2" type="EfcJoint" name="l_hip_y"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="14" current_lim="100" />
+            enable="true" mode="PFH" model_id="14" current_lim="200" />
     <device id="3" type="EfcJoint" name="l_knee_p"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="15" current_lim="100" />
+            enable="true" mode="PFH" model_id="15" current_lim="200" />
     <device id="4" type="EfcJoint" name="l_ankle_l"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="16" current_lim="100" />
+            enable="true" mode="PFH" model_id="16" current_lim="200" />
     <device id="5" type="EfcJoint" name="l_ankle_s"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="17" current_lim="100" />
+            enable="true" mode="PFH" model_id="17" current_lim="200" />
 
     <device id="6" type="EfcJoint" name="r_hip_p"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="18" current_lim="100" />
+            enable="true" mode="PFH" model_id="18" current_lim="200" />
     <device id="7" type="EfcJoint" name="r_hip_r"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="19" current_lim="100" />
+            enable="true" mode="PFH" model_id="19" current_lim="200" />
     <device id="8" type="EfcJoint" name="r_hip_y"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="20" current_lim="100" />
+            enable="true" mode="PFH" model_id="20" current_lim="200" />
     <device id="9" type="EfcJoint" name="r_knee_p"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="21" current_lim="100" />
+            enable="true" mode="PFH" model_id="21" current_lim="200" />
     <device id="10" type="EfcJoint" name="r_ankle_l"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="22" current_lim="100" />
+            enable="true" mode="PFH" model_id="22" current_lim="200" />
     <device id="11" type="EfcJoint" name="r_ankle_s"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="23" current_lim="100" />
+            enable="true" mode="PFH" model_id="23" current_lim="200" />
 
     <device id="12" type="EfcJoint" name="waist_y"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="0" current_lim="100" />
+            enable="true" mode="PFH" model_id="0" current_lim="200" />
 
     <device id="13" type="EfcJoint" name="l_shoulder_p"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="7" current_lim="100" />
+            enable="true" mode="PFH" model_id="7" current_lim="200" />
     <device id="14" type="EfcJoint" name="l_shoulder_r"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="8" current_lim="100" />
+            enable="true" mode="PFH" model_id="8" current_lim="200" />
     <device id="15" type="EfcJoint" name="l_shoulder_y"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="9" current_lim="100" />
+            enable="true" mode="PFH" model_id="9" current_lim="200" />
     <device id="16" type="EfcJoint" name="l_elbow_p"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="10" current_lim="100" />
+            enable="true" mode="PFH" model_id="10" current_lim="200" />
     <device id="17" type="EfcJoint" name="l_elbow_y"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="11" current_lim="100" />
+            enable="true" mode="PFH" model_id="11" current_lim="200" />
 
     <device id="18" type="EfcJoint" name="r_shoulder_p"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="2" current_lim="100" />
+            enable="true" mode="PFH" model_id="2" current_lim="200" />
     <device id="19" type="EfcJoint" name="r_shoulder_r"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="3" current_lim="100" />
+            enable="true" mode="PFH" model_id="3" current_lim="200" />
     <device id="20" type="EfcJoint" name="r_shoulder_y"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="4" current_lim="100" />
+            enable="true" mode="PFH" model_id="4" current_lim="200" />
     <device id="21" type="EfcJoint" name="r_elbow_p"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="5" current_lim="100" />
+            enable="true" mode="PFH" model_id="5" current_lim="200" />
     <device id="22" type="EfcJoint" name="r_elbow_y"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="6" current_lim="100" />
+            enable="true" mode="PFH" model_id="6" current_lim="200" />
 
     <device id="23" type="EfcJoint" name="head_y"
             ct_scale="2.1" pos_bias="0.0" motor_dir="1"
-            enable="true" mode="PFH" model_id="1" current_lim="100" />
+            enable="true" mode="PFH" model_id="1" current_lim="200" />
 
     <device id="24" type="EfcImu" name="imu_hip" dds_imu_index="0" />
 

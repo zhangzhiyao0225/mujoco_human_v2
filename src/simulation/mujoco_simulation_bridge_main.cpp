@@ -98,8 +98,8 @@ int main(int argc, char **argv)
   std::cout << "MuJoCo simulation bridge for bitbot_efc v2" << std::endl;
   std::cout << "ROS subscribe : joint_states, imu_data" << std::endl;
   std::cout << "ROS publish   : actuators_cmds" << std::endl;
-  std::cout << "DDS subscribe : RobotControlCommandTopic(domain 50)" << std::endl;
-  std::cout << "DDS publish   : RobotDataTopic(domain 60)" << std::endl;
+  std::cout << "DDS subscribe : RobotControlCommandTopic(domain 55)" << std::endl;
+  std::cout << "DDS publish   : RobotDataTopic(domain 65)" << std::endl;
   std::cout << "========================================" << std::endl;
 
   MujocoSimulationBridge bridge;

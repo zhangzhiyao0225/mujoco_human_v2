@@ -135,6 +135,12 @@ public:
     //     robot_, config["RobotConfig"]["policy_robust"]);
     current_policy_controller_ = standing_controller_;
     target_policy_controller_ = standing_controller_;
+    if (config["RobotConfig"]["policy_walkingCLF"])
+    {
+      walking_clf_controller_ =
+          ovinf::PolicyControllerFactory::CreatePolicyController(
+              robot_, config["RobotConfig"]["policy_walkingCLF"]);
+    }
 
     command_.setZero();
   }
@@ -223,7 +229,6 @@ public:
           }
         });
 
-
     kernel_.RegisterEvent(
         "enable_wave_greeting",
         static_cast<bitbot::EventId>(Events::EnableWaveGreeting),
@@ -263,13 +268,21 @@ public:
         {
           if (current_policy_controller_ == beyond_mimic_controller_)
           {
-            logger_->warn("BeyondMimic dance policy is already enabled");
+            target_policy_controller_ = beyond_mimic_controller_;
+            switching_flag_ = false;
+            logger_->warn("BeyondMimic/getup policy is already enabled");
             return static_cast<bitbot::StateId>(States::PolicyRunning);
           }
-          logger_->info("Enabling BeyondMimic dance policy");
+          logger_->info("Directly enabling BeyondMimic/getup policy");
+          command_.setZero();
+          init_pos_controller_->Stop();
+          current_policy_controller_->Stop();
+          current_policy_controller_ = beyond_mimic_controller_;
           target_policy_controller_ = beyond_mimic_controller_;
-          target_policy_controller_->Init();
-          return static_cast<bitbot::StateId>(States::PolicySwitching);
+          current_policy_controller_->Init();
+          current_policy_controller_->WarmUp();
+          switching_flag_ = false;
+          return static_cast<bitbot::StateId>(States::PolicyRunning);
         });
 
     kernel_.RegisterEvent(
@@ -397,7 +410,7 @@ public:
           command_[0] = value->linear().x();
           command_[1] = value->linear().y();
           command_[2] = value->angular().z();
-          std::cout << "set_vel_all: " << command_[0] << " " << command_[1] << " " << command_[2] << std::endl;
+          // std::cout << "set_vel_all: " << command_[0] << " " << command_[1] << " " << command_[2] << std::endl;
           // logger_->info("current velocity: x={} y={} w={}", command_[0],
           //               command_[1], command_[2]);
           return std::nullopt;
@@ -422,44 +435,57 @@ public:
                Kernel::ExtraData &extra_data, UserData &user_data)
         {
           // std::cout << "waiting for init" << std::endl;
-          static bool first = true;
-          if (first)
-          {
-            first = false;
-            robot_->SetExtraData(extra_data);
-          }
-
+          EnsureExtraData(extra_data);
           robot_->Observer()->Update();
         },
-        {Events::InitPose});
+        {
+          Events::InitPose,
+          Events::EnableBeyondMimicPolicy,
+        });
 
     kernel_.RegisterState(
         "init_pose", static_cast<bitbot::StateId>(States::InitPose),
         [this](const bitbot::KernelInterface &kernel,
                Kernel::ExtraData &extra_data, UserData &user_data)
         { 
-	// static int i = 0;
-	// if (i ++ < 10)
-	// {
-	// std::cout << "process init" << std::endl;
-	// }
+          // static int i = 0;
+          // if (i ++ < 10)
+          // {
+          // std::cout << "process init" << std::endl;
+          // }
+          EnsureExtraData(extra_data);
           robot_->Observer()->Update();
           init_pos_controller_->Step();
           target_policy_controller_->WarmUp();
           robot_->Executor()->ExecuteJointPosition();
         },
-        {Events::RunPolicy});
+        {
+          Events::RunPolicy,
+          Events::EnableBeyondMimicPolicy,
+          // Events::EnableLocomotion21Policy
+        });
 
     kernel_.RegisterState(
         "policy_running", static_cast<bitbot::StateId>(States::PolicyRunning),
         [this](const bitbot::KernelInterface &kernel,
                Kernel::ExtraData &extra_data, UserData &user_data)
         {
-          std::cout << "" << std::endl;
+          // std::cout << "" << std::endl;
+          EnsureExtraData(extra_data);
           robot_->Observer()->Update();
           current_policy_controller_->GetCommand() = command_;
           current_policy_controller_->Step();
           robot_->Executor()->ExecuteJointPosition();
+          auto beyond_mimic = std::dynamic_pointer_cast<ovinf::PolicyCtrBeyondMimic>(
+              current_policy_controller_);
+          if (beyond_mimic && beyond_mimic->IsTrajectoryFinished())
+          {
+            std::cout << "[PolicyCtrBeyondMimic] Trajectory finished, "
+                         "switch to standing policy."
+                      << std::endl;
+            command_.setZero();
+            kernel.EmitEvent(Events::EnableStandingPolicy, 0);
+          }
         },
         {
             Events::VeloxDecrease,
@@ -488,6 +514,7 @@ public:
         [this](const bitbot::KernelInterface &kernel,
                Kernel::ExtraData &extra_data, UserData &user_data)
         {
+          EnsureExtraData(extra_data);
           if (!switching_flag_)
           {
             switching_flag_ = true;
@@ -511,7 +538,10 @@ public:
             kernel.EmitEvent(Events::PolicySwitch, 0);
           }
         },
-        {Events::PolicySwitch});
+        {
+          Events::PolicySwitch,
+          Events::EnableBeyondMimicPolicy,
+        });
 
     // First state
     kernel_.SetFirstState(static_cast<bitbot::StateId>(States::Waiting));
@@ -534,6 +564,15 @@ public:
   }
 
 private:
+  void EnsureExtraData(Kernel::ExtraData &extra_data)
+  {
+    if (!extra_data_initialized_)
+    {
+      robot_->SetExtraData(extra_data);
+      extra_data_initialized_ = true;
+    }
+  }
+
   class RosCommandBridge
   {
   public:
@@ -636,8 +675,10 @@ private:
   // ovinf::PolicyControllerBase::Ptr locomotion21_controller_ = nullptr;
   ovinf::PolicyControllerBase::Ptr current_policy_controller_ = nullptr;
   ovinf::PolicyControllerBase::Ptr target_policy_controller_ = nullptr;
+  ovinf::PolicyControllerBase::Ptr walking_clf_controller_ = nullptr;
 
   bool switching_flag_ = false;
+  bool extra_data_initialized_ = false;
   double switching_time_;
   std::chrono::steady_clock::time_point switching_start_time_;
 

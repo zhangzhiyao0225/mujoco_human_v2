@@ -37,6 +37,10 @@
       "kb_key": "3"
     },
     {
+      "event": "enable_beyond_mimic_policy",
+      "kb_key": "4"
+    },
+    {
       "event": "policy_switch",
       "kb_key": "$"
     },
@@ -78,4 +82,3 @@
     }
   ]
 }
-

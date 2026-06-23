@@ -35,6 +35,8 @@ class PolicyFactory {
       return std::make_shared<BeyondMimicPolicy>(config);
     } else if (policy_type == "Locomotion21") {
       return std::make_shared<Locomotion21Policy>(config);
+    } else if (policy_type == "WalkingCLFPolicy") {
+      throw std::invalid_argument("WalkingCLFPolicy is not implemented");
     } else {
       throw std::invalid_argument("Unknown policy type: " + policy_type);
     }

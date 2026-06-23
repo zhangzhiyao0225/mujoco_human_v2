@@ -1,6 +1,7 @@
 #ifndef POLICY_CTR_AUTO_HPP
 #define POLICY_CTR_AUTO_HPP
 
+#include <algorithm>
 #include <chrono>
 
 #include "filter/filter_mean.hpp"
@@ -18,6 +19,7 @@ class PolicyCtrAuto : public PolicyControllerBase {
   PolicyCtrAuto(RobotBase<float>::RobotPtr robot, YAML::Node const& config)
       : PolicyControllerBase(robot, config) {
     action_size_ = config["inference"]["action_size"].as<size_t>();
+    startup_blend_time_ = config["startup_blend_time"].as<double>(0.0);
 
     for (size_t i = 0; i < action_size_; i++) {
       std::string joint_name =
@@ -57,6 +59,8 @@ class PolicyCtrAuto : public PolicyControllerBase {
     ready_ = true;
     target_pos_filter_->Reset();
     policy_target_position_ = robot_->Executor()->JointTargetPosition();
+    startup_blend_pending_ = startup_blend_time_ > 1e-6;
+    startup_blending_ = false;
   }
 
   virtual void Step(bool set_target = true) final {
@@ -92,6 +96,7 @@ class PolicyCtrAuto : public PolicyControllerBase {
           policy_target_position_[policy_joint_idx_map_[i]] =
               target_pos.value()[i];
         }
+        policy_target_position_ = ApplyStartupBlend(policy_target_position_);
       } else {
         // std::cout << "target pos is empty" << std::endl;
       }
@@ -106,14 +111,52 @@ class PolicyCtrAuto : public PolicyControllerBase {
   virtual void Stop() final {
     command_ = VectorT::Zero(3);
     ready_ = false;
+    startup_blend_pending_ = false;
+    startup_blending_ = false;
   }
 
  private:
+  static double SmoothStep(double x) {
+    x = std::clamp(x, 0.0, 1.0);
+    return x * x * (3.0 - 2.0 * x);
+  }
+
+  VectorT ApplyStartupBlend(const VectorT& desired_target) {
+    if (startup_blend_pending_) {
+      startup_blend_pending_ = false;
+      startup_blending_ = true;
+      startup_blend_start_time_ = std::chrono::steady_clock::now();
+      startup_blend_start_target_ = robot_->Executor()->JointTargetPosition();
+      std::cout << "[PolicyCtrAuto] Startup blend: " << startup_blend_time_
+                << "s" << std::endl;
+    }
+
+    if (!startup_blending_) {
+      return desired_target;
+    }
+
+    const double elapsed =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                      startup_blend_start_time_)
+            .count();
+    const double alpha = SmoothStep(elapsed / startup_blend_time_);
+    if (alpha >= 1.0) {
+      startup_blending_ = false;
+      return desired_target;
+    }
+    return (1.0 - alpha) * startup_blend_start_target_ +
+           alpha * desired_target;
+  }
+
   size_t action_size_ = 0;
   std::map<size_t, size_t> policy_joint_idx_map_;
+  double startup_blend_time_ = 0.0;
+  bool startup_blend_pending_ = false;
+  bool startup_blending_ = false;
+  VectorT startup_blend_start_target_;
+  std::chrono::steady_clock::time_point startup_blend_start_time_;
 };
 
 }  // namespace ovinf
 
 #endif  // !POLICY_CTR_AUTO_HPP
-
