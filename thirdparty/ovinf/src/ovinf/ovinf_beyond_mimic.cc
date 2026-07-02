@@ -1,5 +1,7 @@
 #include "ovinf/ovinf_beyond_mimic.h"
 
+#include <algorithm>
+#include <cmath>
 #include <limits>
 
 namespace ovinf {
@@ -33,6 +35,14 @@ BeyondMimicPolicy::BeyondMimicPolicy(const YAML::Node &config)
   clip_action_ = config["clip_action"].as<float>();
   auto_start_ = config["auto_start"].as<bool>(false);
   startup_timestep_offset_ = config["startup_timestep_offset"].as<size_t>(0);
+  trajectory_time_scale_ = config["trajectory_time_scale"].as<float>(1.0f);
+  startup_match_mode_ = config["startup_match_mode"].as<std::string>("offset");
+  startup_match_stride_ = config["startup_match_stride"].as<size_t>(2);
+  startup_match_min_timestep_ = config["startup_match_min_timestep"].as<size_t>(0);
+  startup_match_max_timestep_ = config["startup_match_max_timestep"].as<size_t>(std::numeric_limits<size_t>::max());
+  startup_match_joint_weight_ = config["startup_match_joint_weight"].as<float>(1.0f);
+  startup_match_orientation_weight_ =
+      config["startup_match_orientation_weight"].as<float>(0.0f);
   joint_default_position_ = VectorT(joint_names_.size());
   stick_to_core_ = config["stick_to_core"].as<size_t>();
   log_name_ = config["log_name"].as<std::string>();
@@ -101,10 +111,25 @@ BeyondMimicPolicy::BeyondMimicPolicy(const YAML::Node &config)
   worker_thread_ = std::thread(&BeyondMimicPolicy::WorkerThread, this);
 }
 
+void BeyondMimicPolicy::ResetTrajectoryState() {
+  motion_phase_input_ = static_cast<float>(startup_timestep_offset_);
+  timestep_input_ = std::floor(motion_phase_input_);
+  dancing_started_.store(false);
+  corrected_bias_flag_.store(false);
+  last_action_ = VectorT(action_size_).setZero();
+  latest_target_ = joint_default_position_;
+  ref_joint_pos_ = joint_default_position_;
+  ref_joint_vel_ = VectorT::Zero(action_size_);
+  ref_base_quat_ = QuaternionT::Identity();
+  yaw_bias_ = QuaternionT::Identity();
+  init_q_yaw_ = QuaternionT::Identity();
+}
+
 bool BeyondMimicPolicy::WarmUp(RobotObservation<float> const &obs_pack) {
   VectorT obs(single_obs_size_);
   obs.setZero();
   timestep_input_ = 0.0;
+  motion_phase_input_ = 0.0f;
   dancing_started_.store(false);
   last_action_ = VectorT(action_size_).setZero();
   latest_target_ = joint_default_position_;
@@ -147,16 +172,21 @@ bool BeyondMimicPolicy::InferUnsync(RobotObservation<float> const &obs_pack) {
   if ((auto_start_ || obs_pack.command(0, 0) > 0.15f) &&
       !dancing_started_.load()) {
     dancing_started_.store(true);
-    timestep_input_ = static_cast<float>(startup_timestep_offset_);
+    const size_t startup_timestep = SelectStartupTimestep(obs_pack);
+    motion_phase_input_ = static_cast<float>(startup_timestep);
+    timestep_input_ = std::floor(motion_phase_input_);
   } else if (dancing_started_.load() &&
              (traj_length_ == std::numeric_limits<size_t>::max() ||
               timestep_input_ < static_cast<float>(traj_length_ - 1))) {
-    timestep_input_ += 1.0;
+    motion_phase_input_ += trajectory_time_scale_;
+    timestep_input_ = std::floor(motion_phase_input_);
   } else if (dancing_started_.load() &&
              traj_length_ != std::numeric_limits<size_t>::max()) {
+    motion_phase_input_ = static_cast<float>(traj_length_ - 1);
     timestep_input_ = static_cast<float>(traj_length_ - 1);
   } else {
-    timestep_input_ = static_cast<float>(startup_timestep_offset_);
+    motion_phase_input_ = static_cast<float>(startup_timestep_offset_);
+    timestep_input_ = std::floor(motion_phase_input_);
 
     // Get yaw bias
     init_q_yaw_ = AngleAxisT(obs_pack.euler_angles(2), Vector3T::UnitZ());
@@ -221,6 +251,95 @@ bool BeyondMimicPolicy::InferUnsync(RobotObservation<float> const &obs_pack) {
   }
 }
 
+
+size_t BeyondMimicPolicy::SelectStartupTimestep(
+    RobotObservation<float> const &obs_pack) {
+  if (startup_match_mode_ != "joint_nearest") {
+    return startup_timestep_offset_;
+  }
+  if (!inference_done_.load()) {
+    return startup_timestep_offset_;
+  }
+
+  const size_t effective_traj_length =
+      traj_length_ == std::numeric_limits<size_t>::max() ? 0 : traj_length_;
+  if (effective_traj_length == 0) {
+    return startup_timestep_offset_;
+  }
+
+  VectorT zero_obs(single_obs_size_);
+  zero_obs.setZero();
+  ov::Tensor obs_tensor(obs_info_.get_element_type(), obs_info_.get_shape(),
+                        zero_obs.data());
+
+  const size_t stride = std::max<size_t>(1, startup_match_stride_);
+  float best_score = std::numeric_limits<float>::infinity();
+  size_t best_timestep = startup_timestep_offset_;
+  VectorT best_ref_joint_pos = ref_joint_pos_;
+  VectorT best_ref_joint_vel = ref_joint_vel_;
+  QuaternionT best_ref_quat = ref_base_quat_;
+
+  QuaternionT current_orientation =
+      AngleAxisT(obs_pack.euler_angles(2), Vector3T::UnitZ()) *
+      AngleAxisT(obs_pack.euler_angles(1), Vector3T::UnitY()) *
+      AngleAxisT(obs_pack.euler_angles(0), Vector3T::UnitX());
+
+  const size_t search_start = std::min(startup_match_min_timestep_, effective_traj_length - 1);
+  const size_t search_end = std::min(startup_match_max_timestep_, effective_traj_length - 1);
+  for (size_t t = search_start; t <= search_end; t += stride) {
+    float timestep = static_cast<float>(t);
+    ov::Tensor timestep_tensor(timestep_info_.get_element_type(),
+                               timestep_info_.get_shape(), &timestep);
+    infer_request_.set_input_tensor(0, obs_tensor);
+    infer_request_.set_input_tensor(1, timestep_tensor);
+    infer_request_.infer();
+
+    auto ref_joint_pos_tensor = infer_request_.get_output_tensor(1);
+    auto ref_joint_vel_tensor = infer_request_.get_output_tensor(2);
+    auto body_quat_tensor = infer_request_.get_output_tensor(4);
+    VectorT ref_joint_pos =
+        Eigen::Map<VectorT>(ref_joint_pos_tensor.data<float>(), action_size_);
+
+    const float joint_error =
+        (obs_pack.joint_pos - ref_joint_pos).squaredNorm() /
+        static_cast<float>(std::max<size_t>(1, action_size_));
+
+    const float* body_quat_data = body_quat_tensor.data<float>() + 4 * anchor_body_index_;
+    QuaternionT ref_quat(body_quat_data[0], body_quat_data[1],
+                         body_quat_data[2], body_quat_data[3]);
+    const Matrix3T orientation_diff =
+        (current_orientation.inverse() * ref_quat).toRotationMatrix();
+    const float orientation_error =
+        (3.0f - orientation_diff.trace()) * 0.5f;
+
+    const float score = startup_match_joint_weight_ * joint_error +
+                        startup_match_orientation_weight_ * orientation_error;
+    if (score < best_score) {
+      best_score = score;
+      best_timestep = t;
+      best_ref_joint_pos = ref_joint_pos;
+      best_ref_joint_vel =
+          Eigen::Map<VectorT>(ref_joint_vel_tensor.data<float>(), action_size_);
+      best_ref_quat = ref_quat;
+    }
+  }
+
+  ref_joint_pos_ = best_ref_joint_pos;
+  ref_joint_vel_ = best_ref_joint_vel;
+  ref_base_quat_ = best_ref_quat;
+
+  Vector3T first_ref_ori_rpy =
+      ref_base_quat_.toRotationMatrix().eulerAngles(0, 1, 2);
+  init_q_yaw_ = AngleAxisT(obs_pack.euler_angles(2), Vector3T::UnitZ());
+  yaw_bias_ =
+      (init_q_yaw_ * AngleAxisT(-first_ref_ori_rpy(2), Vector3T::UnitZ()))
+          .normalized();
+
+  std::cout << "[BeyondMimicPolicy] startup matched timestep "
+            << best_timestep << " score=" << best_score << std::endl;
+  return best_timestep;
+}
+
 std::optional<BeyondMimicPolicy::VectorT> BeyondMimicPolicy::GetResult(
     const size_t timeout) {
   if (inference_done_.load()) {
@@ -242,6 +361,16 @@ void BeyondMimicPolicy::PrintInfo() {
   std::cout << "Action scale: " << action_scale_ << std::endl;
   std::cout << "Startup timestep offset: " << startup_timestep_offset_
             << std::endl;
+  std::cout << "Startup match mode: " << startup_match_mode_
+            << ", stride: " << startup_match_stride_
+            << ", range: [" << startup_match_min_timestep_ << ", "
+            << startup_match_max_timestep_ << "]"
+            << ", joint weight: " << startup_match_joint_weight_
+            << ", orientation weight: " << startup_match_orientation_weight_
+            << std::endl;
+  std::cout << "Trajectory time scale: " << trajectory_time_scale_
+            << std::endl;
+  std::cout << "Anchor body index: " << anchor_body_index_ << std::endl;
   std::cout << "  - Obs scale ang vel: " << obs_scale_ang_vel_ << std::endl;
   std::cout << "  - Obs scale command: " << obs_scale_command_ << std::endl;
   std::cout << "  - Obs scale dof pos: " << obs_scale_dof_pos_ << std::endl;
@@ -294,9 +423,9 @@ void BeyondMimicPolicy::WorkerThread() {
           Eigen::Map<VectorT>(ref_joint_pos_tensor.data<float>(), action_size_);
       ref_joint_vel_ =
           Eigen::Map<VectorT>(ref_joint_vel_tensor.data<float>(), action_size_);
-      ref_base_quat_ = QuaternionT(
-          body_quat_tensor.data<float>()[0], body_quat_tensor.data<float>()[1],
-          body_quat_tensor.data<float>()[2], body_quat_tensor.data<float>()[3]);
+      const float* body_quat_data = body_quat_tensor.data<float>() + 4 * anchor_body_index_;
+      ref_base_quat_ = QuaternionT(body_quat_data[0], body_quat_data[1],
+                                   body_quat_data[2], body_quat_data[3]);
 
       VectorT action_eigen =
           Eigen::Map<VectorT>(action_tensor.data<float>(), action_size_)

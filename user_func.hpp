@@ -23,6 +23,7 @@
 // #include "ovinf/robot/robot_efc.hpp"
 
 #include "controller/init_pos.hpp"
+#include "controller/head_survey.hpp"
 #include "controller/policy_controller_factory.hpp"
 #include "controller/wave_greeting.hpp"
 #include "controller/handshake.hpp"
@@ -41,6 +42,7 @@ enum Events
   EnableWaveGreeting,
   EnableHandshakePolicy,
   EnableBeyondMimicPolicy,
+  EnableHeadSurveyPolicy,
   // EnableLocomotion21Policy,
   PolicySwitch,
 
@@ -80,6 +82,7 @@ static std::unordered_map<bitbot::EventValue, bitbot::EventId> s_key_2_evts =
         {6, static_cast<bitbot::EventId>(Events::EnableWaveGreeting)},
         {7, static_cast<bitbot::EventId>(Events::EnableHandshakePolicy)},
         {8, static_cast<bitbot::EventId>(Events::EnableBeyondMimicPolicy)},
+        {9, static_cast<bitbot::EventId>(Events::EnableHeadSurveyPolicy)},
         // {8, static_cast<bitbot::EventId>(Events::EnableLocomotion21Policy)},
 };
 
@@ -104,6 +107,17 @@ public:
     YAML::Node config = YAML::LoadFile(controller_config);
 
     switching_time_ = config["RobotConfig"]["switching_time"].as<double>();
+    if (config["RobotConfig"]["fall_recovery"])
+    {
+      const auto fall_recovery_cfg = config["RobotConfig"]["fall_recovery"];
+      fall_recovery_enabled_ = fall_recovery_cfg["enable"].as<bool>(true);
+      fall_recovery_roll_abs_ = fall_recovery_cfg["roll_abs"].as<double>(0.65);
+      fall_recovery_pitch_abs_ = fall_recovery_cfg["pitch_abs"].as<double>(0.65);
+      fall_recovery_confirm_cycles_ =
+          fall_recovery_cfg["confirm_cycles"].as<int>(8);
+      fall_recovery_cooldown_s_ =
+          fall_recovery_cfg["cooldown_s"].as<double>(3.0);
+    }
 
     // robot
     robot_ = std::make_shared<RobotT>(config["RobotConfig"]);
@@ -128,6 +142,9 @@ public:
     handshake_controller_ = std::make_shared<ovinf::HandshakeController>(
         robot_, config["RobotConfig"]["policy_standing"],
         config["RobotConfig"]["traditional_handshake"]);
+    head_survey_controller_ = std::make_shared<ovinf::HeadSurveyController>(
+        robot_, config["RobotConfig"]["policy_standing"],
+        config["RobotConfig"]["traditional_head_survey"]);
     beyond_mimic_controller_ =
         ovinf::PolicyControllerFactory::CreatePolicyController(
             robot_, config["RobotConfig"]["policy_beyond_mimic"]);
@@ -262,26 +279,27 @@ public:
         });
 
     kernel_.RegisterEvent(
+        "enable_head_survey_policy",
+        static_cast<bitbot::EventId>(Events::EnableHeadSurveyPolicy),
+        [this](bitbot::EventValue, UserData &)
+        {
+          if (current_policy_controller_ == head_survey_controller_)
+          {
+            logger_->warn("Head survey policy is already enabled");
+            return static_cast<bitbot::StateId>(States::PolicyRunning);
+          }
+          logger_->info("Enabling head survey policy");
+          target_policy_controller_ = head_survey_controller_;
+          target_policy_controller_->Init();
+          return static_cast<bitbot::StateId>(States::PolicySwitching);
+        });
+
+    kernel_.RegisterEvent(
         "enable_beyond_mimic_policy",
         static_cast<bitbot::EventId>(Events::EnableBeyondMimicPolicy),
         [this](bitbot::EventValue, UserData &)
         {
-          if (current_policy_controller_ == beyond_mimic_controller_)
-          {
-            target_policy_controller_ = beyond_mimic_controller_;
-            switching_flag_ = false;
-            logger_->warn("BeyondMimic/getup policy is already enabled");
-            return static_cast<bitbot::StateId>(States::PolicyRunning);
-          }
-          logger_->info("Directly enabling BeyondMimic/getup policy");
-          command_.setZero();
-          init_pos_controller_->Stop();
-          current_policy_controller_->Stop();
-          current_policy_controller_ = beyond_mimic_controller_;
-          target_policy_controller_ = beyond_mimic_controller_;
-          current_policy_controller_->Init();
-          current_policy_controller_->WarmUp();
-          switching_flag_ = false;
+          EnableBeyondMimicRecovery("manual event");
           return static_cast<bitbot::StateId>(States::PolicyRunning);
         });
 
@@ -473,6 +491,10 @@ public:
           // std::cout << "" << std::endl;
           EnsureExtraData(extra_data);
           robot_->Observer()->Update();
+          if (ShouldEnterFallRecovery())
+          {
+            EnableBeyondMimicRecovery("imu tilt");
+          }
           current_policy_controller_->GetCommand() = command_;
           current_policy_controller_->Step();
           robot_->Executor()->ExecuteJointPosition();
@@ -504,6 +526,7 @@ public:
             Events::EnableWaveGreeting,
             Events::EnableHandshakePolicy,
             Events::EnableBeyondMimicPolicy,
+            Events::EnableHeadSurveyPolicy,
             // Events::EnableLocomotion21Policy,
             static_cast<bitbot::EventId>(bitbot::KernelEvent::STOP),
         });
@@ -571,6 +594,73 @@ private:
       robot_->SetExtraData(extra_data);
       extra_data_initialized_ = true;
     }
+  }
+
+  bool ShouldEnterFallRecovery()
+  {
+    if (!fall_recovery_enabled_ ||
+        current_policy_controller_ == beyond_mimic_controller_)
+    {
+      fall_recovery_tilt_counter_ = 0;
+      return false;
+    }
+
+    const auto euler = robot_->Observer()->EulerRpy();
+    const bool tilted = std::abs(static_cast<double>(euler[0])) >
+                            fall_recovery_roll_abs_ ||
+                        std::abs(static_cast<double>(euler[1])) >
+                            fall_recovery_pitch_abs_;
+    if (!tilted)
+    {
+      fall_recovery_tilt_counter_ = 0;
+      return false;
+    }
+
+    ++fall_recovery_tilt_counter_;
+    if (fall_recovery_tilt_counter_ < fall_recovery_confirm_cycles_)
+    {
+      return false;
+    }
+
+    const auto now = std::chrono::steady_clock::now();
+    if (fall_recovery_last_trigger_.time_since_epoch().count() != 0)
+    {
+      const double elapsed =
+          std::chrono::duration<double>(now - fall_recovery_last_trigger_)
+              .count();
+      if (elapsed < fall_recovery_cooldown_s_)
+      {
+        return false;
+      }
+    }
+
+    fall_recovery_last_trigger_ = now;
+    fall_recovery_tilt_counter_ = 0;
+    return true;
+  }
+
+  void EnableBeyondMimicRecovery(const char *reason)
+  {
+    if (current_policy_controller_ == beyond_mimic_controller_)
+    {
+      target_policy_controller_ = beyond_mimic_controller_;
+      switching_flag_ = false;
+      logger_->warn("BeyondMimic/getup policy is already enabled");
+      return;
+    }
+
+    logger_->info("Directly enabling BeyondMimic/getup policy ({})", reason);
+    command_.setZero();
+    init_pos_controller_->Stop();
+    if (current_policy_controller_)
+    {
+      current_policy_controller_->Stop();
+    }
+    current_policy_controller_ = beyond_mimic_controller_;
+    target_policy_controller_ = beyond_mimic_controller_;
+    current_policy_controller_->Init();
+    current_policy_controller_->WarmUp();
+    switching_flag_ = false;
   }
 
   class RosCommandBridge
@@ -671,6 +761,7 @@ private:
   ovinf::PolicyControllerBase::Ptr robust_controller_ = nullptr;
   ovinf::PolicyControllerBase::Ptr wave_greeting_controller_ = nullptr;
   ovinf::PolicyControllerBase::Ptr handshake_controller_ = nullptr;
+  ovinf::PolicyControllerBase::Ptr head_survey_controller_ = nullptr;
   ovinf::PolicyControllerBase::Ptr beyond_mimic_controller_ = nullptr;
   // ovinf::PolicyControllerBase::Ptr locomotion21_controller_ = nullptr;
   ovinf::PolicyControllerBase::Ptr current_policy_controller_ = nullptr;
@@ -681,6 +772,14 @@ private:
   bool extra_data_initialized_ = false;
   double switching_time_;
   std::chrono::steady_clock::time_point switching_start_time_;
+
+  bool fall_recovery_enabled_ = true;
+  double fall_recovery_roll_abs_ = 0.65;
+  double fall_recovery_pitch_abs_ = 0.65;
+  int fall_recovery_confirm_cycles_ = 8;
+  double fall_recovery_cooldown_s_ = 3.0;
+  int fall_recovery_tilt_counter_ = 0;
+  std::chrono::steady_clock::time_point fall_recovery_last_trigger_;
 
   Eigen::Vector3f command_;
   std::unique_ptr<RosCommandBridge> ros_command_bridge_;

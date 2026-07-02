@@ -5,6 +5,16 @@ RobotConfig:
   motor_size: 24
   use_parallel_ankle: false
   switching_time: 0.50
+  # Auto switch to BeyondMimic getup when IMU roll/pitch indicates a fall.
+  # BeyondMimic itself uses startup_match_mode=joint_nearest to pick the
+  # closest reference frame after switching in.
+  fall_recovery:
+    enable: false
+    # Trigger early, before the robot fully falls. 0.35 rad is about 20 deg.
+    roll_abs: 0.35
+    pitch_abs: 0.35
+    confirm_cycles: 2
+    cooldown_s: 2.0
   joint_names:
     - "l_hip_p"
     - "l_hip_r"
@@ -81,7 +91,6 @@ RobotConfig:
     r_elbow_p: 1
     r_elbow_y: 1
     head_y: 1
-
   ankle_left:
     l_bar1: 0.023
     l_rod1: 0.173
@@ -109,7 +118,7 @@ RobotConfig:
     r_op: [0.0, 0.0, -0.016]
 
   observer:
-    log_data: 2
+    log_data: 1
     log_dir: "/home/huahui/zzy/robot_control/mujoco_human_v2/log/extra"
     motor_pos_filter:
       type: "PassThrough"
@@ -163,30 +172,30 @@ RobotConfig:
 
   executor:
     torque_limit:  # Nm
-      l_hip_p: 500
-      l_hip_r: 500
-      l_hip_y: 500
-      l_knee: 500
-      l_ankle_l: 500
-      l_ankle_s: 500
-      r_hip_p: 500
-      r_hip_r: 500
-      r_hip_y: 500
-      r_knee: 500
-      r_ankle_l: 500
-      r_ankle_s: 500
-      waist_y: 500
-      l_shoulder_p: 500
-      l_shoulder_r: 500
-      l_shoulder_y: 500
-      l_elbow_p: 500
-      l_elbow_y: 500
-      r_shoulder_p: 500
-      r_shoulder_r: 500
-      r_shoulder_y: 500
-      r_elbow_p: 500
-      r_elbow_y: 500
-      head_y: 500
+      l_hip_p: 130
+      l_hip_r: 130
+      l_hip_y: 130
+      l_knee: 130
+      l_ankle_l: 100
+      l_ankle_s: 100
+      r_hip_p: 130
+      r_hip_r: 130
+      r_hip_y: 130
+      r_knee: 130
+      r_ankle_l: 100
+      r_ankle_s: 100
+      waist_y: 130
+      l_shoulder_p: 100
+      l_shoulder_r: 100
+      l_shoulder_y: 100
+      l_elbow_p: 100
+      l_elbow_y: 100
+      r_shoulder_p: 100
+      r_shoulder_r: 100
+      r_shoulder_y: 100
+      r_elbow_p: 100
+      r_elbow_y: 100
+      head_y: 100
     motor_upper_limit:  # rad
       l_hip_p: 3.14
       l_hip_r: 3.14
@@ -237,137 +246,58 @@ RobotConfig:
       r_elbow_p: -3.14
       r_elbow_y: -3.14
       head_y: -3.14
-
   init_pos:
     duration: 1.5
     init_position: &defult_init_pos
-      l_hip_p: -0.25
-      l_hip_r: 0
-      l_hip_y: 0
-      l_knee: 0.5
-      l_ankle_p: -0.25
-      l_ankle_r: 0
-      r_hip_p: -0.25
-      r_hip_r: 0
-      r_hip_y: 0
-      r_knee: 0.5
-      r_ankle_p: -0.25
-      r_ankle_r: 0
-      waist_y: 0
+      l_hip_p: -0.3
+      l_hip_r: 0.0
+      l_hip_y: 0.0
+      l_knee: 0.6
+      l_ankle_p: -0.3
+      l_ankle_r: 0.0
+      r_hip_p: -0.3
+      r_hip_r: 0.0
+      r_hip_y: 0.0
+      r_knee: 0.6
+      r_ankle_p: -0.3
+      r_ankle_r: 0.0
+      waist_y: 0.0
       l_shoulder_p: 0.3
       l_shoulder_r: 0.1
-      l_shoulder_y: 0
+      l_shoulder_y: 0.0
       l_elbow_p: -0.8
-      l_elbow_y: 0
+      l_elbow_y: 0.0
       r_shoulder_p: 0.3
       r_shoulder_r: -0.1
-      r_shoulder_y: 0
+      r_shoulder_y: 0.0
       r_elbow_p: -0.8
-      r_elbow_y: 0
-      head_y: 0
-
-      # l_hip_p: 0.0
-      # l_hip_r: 0
-      # l_hip_y: 0
-      # l_knee: 0.0
-      # l_ankle_p: 0.0
-      # l_ankle_r: 0
-      # r_hip_p: 0.0
-      # r_hip_r: 0
-      # r_hip_y: 0
-      # r_knee: 0.0
-      # r_ankle_p: 0.0
-      # r_ankle_r: 0
-      # waist_y: 0
-      # l_shoulder_p: 0.0
-      # l_shoulder_r: 0.0
-      # l_shoulder_y: 0
-      # l_elbow_p: 0.0
-      # l_elbow_y: 0
-      # r_shoulder_p: 0.
-      # r_shoulder_r: 0.0
-      # r_shoulder_y: 0
-      # r_elbow_p: 0.
-      # r_elbow_y: 0
-      # head_y: 0
-
+      r_elbow_y: 0.0
+      head_y: 0.0
     p_gains: &default_p_gains
       l_hip_p: 150
       l_hip_r: 150
       l_hip_y: 100
       l_knee: 150
-      l_ankle_p: 30 # 30
-      l_ankle_r: 30 # 30
+      l_ankle_p: 30
+      l_ankle_r: 30
       r_hip_p: 150
       r_hip_r: 150
       r_hip_y: 100
       r_knee: 150
-      r_ankle_p: 30 # 30
-      r_ankle_r: 30 # 30
-      waist_y: 100 
-      l_shoulder_p: 30
-      l_shoulder_r: 20
-      l_shoulder_y: 10
-      l_elbow_p: 10
-      l_elbow_y: 10
-      r_shoulder_p: 30
-      r_shoulder_r: 20
-      r_shoulder_y: 10
-      r_elbow_p: 10
-      r_elbow_y: 10
-      head_y: 30
-
-      # 5/10 120p
-      # l_hip_p: 120
-      # l_hip_r: 120
-      # l_hip_y: 80
-      # l_knee: 120
-      # l_ankle_p: 30 # 30
-      # l_ankle_r: 30 # 30
-      # r_hip_p: 120
-      # r_hip_r: 120
-      # r_hip_y: 80
-      # r_knee: 120
-      # r_ankle_p: 30 # 30
-      # r_ankle_r: 30 # 30
-      # waist_y: 80 
-      # l_shoulder_p: 30
-      # l_shoulder_r: 20
-      # l_shoulder_y: 10
-      # l_elbow_p: 10
-      # l_elbow_y: 10
-      # r_shoulder_p: 30
-      # r_shoulder_r: 20
-      # r_shoulder_y: 10
-      # r_elbow_p: 10
-      # r_elbow_y: 10
-      # head_y: 30
-
-      # l_hip_p: 75
-      # l_hip_r: 75
-      # l_hip_y: 50
-      # l_knee: 75
-      # l_ankle_p: 15 # 30
-      # l_ankle_r: 15 # 30
-      # r_hip_p: 75
-      # r_hip_r: 75
-      # r_hip_y: 50
-      # r_knee: 75
-      # r_ankle_p: 15 # 30
-      # r_ankle_r: 15 # 30
-      # waist_y: 50 
-      # l_shoulder_p: 30
-      # l_shoulder_r: 20
-      # l_shoulder_y: 10
-      # l_elbow_p: 10
-      # l_elbow_y: 10
-      # r_shoulder_p: 30
-      # r_shoulder_r: 20
-      # r_shoulder_y: 10
-      # r_elbow_p: 10
-      # r_elbow_y: 10
-      # head_y: 30
-
+      r_ankle_p: 30
+      r_ankle_r: 30
+      waist_y: 200
+      l_shoulder_p: 45
+      l_shoulder_r: 35
+      l_shoulder_y: 25
+      l_elbow_p: 30
+      l_elbow_y: 25
+      r_shoulder_p: 45
+      r_shoulder_r: 35
+      r_shoulder_y: 25
+      r_elbow_p: 30
+      r_elbow_y: 25
+      head_y: 10
     d_gains: &default_d_gains
       l_hip_p: 3
       l_hip_r: 3
@@ -382,18 +312,17 @@ RobotConfig:
       r_ankle_p: 2
       r_ankle_r: 2
       waist_y: 3
-      l_shoulder_p: 2.0
-      l_shoulder_r: 2.0
-      l_shoulder_y: 2.0
-      l_elbow_p: 2.0
-      l_elbow_y: 2.0
-      r_shoulder_p: 2.0
-      r_shoulder_r: 2.0
-      r_shoulder_y: 2.0
-      r_elbow_p: 2.0
-      r_elbow_y: 2.0
-      head_y: 2.0
-
+      l_shoulder_p: 3
+      l_shoulder_r: 3
+      l_shoulder_y: 3
+      l_elbow_p: 3
+      l_elbow_y: 3
+      r_shoulder_p: 3
+      r_shoulder_r: 3
+      r_shoulder_y: 3
+      r_elbow_p: 3
+      r_elbow_y: 3
+      head_y: 2
   zero_pos:
     duration: 1.0
     init_position: *defult_init_pos
@@ -431,6 +360,18 @@ RobotConfig:
     shoulder_yaw_offset: 0.20    # 右肩朝身体前方转一点
     elbow_pitch_offset: -0.15    # 右肘微弯，避免完全伸直太僵
     elbow_yaw_offset: -0.35       # 小臂/手掌朝向偏置
+
+  traditional_head_survey:
+    controller_type: "HEAD_SURVEY"
+    p_gains: *default_p_gains
+    d_gains: *default_d_gains
+    default_position: *defult_init_pos
+    turn_left_duration: 2.5      # 从当前头部角度慢慢转到左侧 45 度
+    turn_right_duration: 4.0     # 从左 45 度扫到右 45 度，总共转 90 度
+    return_duration: 2.5         # 从右侧慢慢回到中间 0 位
+    left_yaw: 0.785398           # 左转 45 度，单位 rad；方向反了就和 right_yaw 交换符号
+    right_yaw: -0.785398         # 右转 45 度，单位 rad
+    center_yaw: 0.0              # 最后回到头部中位
 
   policy_standing:
     controller_type: "AUTO"
@@ -523,7 +464,6 @@ RobotConfig:
         r_ankle_p: -0.3
         r_ankle_r: 0.0
         waist_y: 0.0
-
   policy_walking:
     controller_type: "AUTO"
     p_gains: *default_p_gains
@@ -583,59 +523,107 @@ RobotConfig:
         - "r_elbow_p"
       policy_default_position:
         l_hip_p: -0.15
-        l_hip_r: 0
-        l_hip_y: 0
+        l_hip_r: 0.0
+        l_hip_y: 0.0
         l_knee: 0.3
         l_ankle_p: -0.15
-        l_ankle_r: 0
+        l_ankle_r: 0.0
         r_hip_p: -0.15
-        r_hip_r: 0
-        r_hip_y: 0
+        r_hip_r: 0.0
+        r_hip_y: 0.0
         r_knee: 0.3
         r_ankle_p: -0.15
-        r_ankle_r: 0
-        waist_y: 0
+        r_ankle_r: 0.0
+        waist_y: 0.0
         l_shoulder_p: 0.3
         l_shoulder_r: 0.1
-        l_shoulder_y: 0
+        l_shoulder_y: 0.0
         l_elbow_p: -0.8
-        l_elbow_y: 0
+        l_elbow_y: 0.0
         r_shoulder_p: 0.3
         r_shoulder_r: -0.1
-        r_shoulder_y: 0
+        r_shoulder_y: 0.0
         r_elbow_p: -0.8
-        r_elbow_y: 0
-        head_y: 0
+        r_elbow_y: 0.0
+        head_y: 0.0
 
   policy_beyond_mimic:
     controller_type: "BEYOND_MIMIC"
-    p_gains: *default_p_gains
-    d_gains: *default_d_gains
+    p_gains:
+      l_hip_p: 150
+      l_hip_r: 150
+      l_hip_y: 100
+      l_knee: 150
+      l_ankle_p: 30
+      l_ankle_r: 30
+      r_hip_p: 150
+      r_hip_r: 150
+      r_hip_y: 100
+      r_knee: 150
+      r_ankle_p: 30
+      r_ankle_r: 30
+      waist_y: 200
+      l_shoulder_p: 45
+      l_shoulder_r: 35
+      l_shoulder_y: 25
+      l_elbow_p: 30
+      l_elbow_y: 25
+      r_shoulder_p: 45
+      r_shoulder_r: 35
+      r_shoulder_y: 25
+      r_elbow_p: 30
+      r_elbow_y: 25
+      head_y: 10
+    d_gains:
+      l_hip_p: 3
+      l_hip_r: 3
+      l_hip_y: 3
+      l_knee: 3
+      l_ankle_p: 2
+      l_ankle_r: 2
+      r_hip_p: 3
+      r_hip_r: 3
+      r_hip_y: 3
+      r_knee: 3
+      r_ankle_p: 2
+      r_ankle_r: 2
+      waist_y: 3
+      l_shoulder_p: 3
+      l_shoulder_r: 3
+      l_shoulder_y: 3
+      l_elbow_p: 3
+      l_elbow_y: 3
+      r_shoulder_p: 3
+      r_shoulder_r: 3
+      r_shoulder_y: 3
+      r_elbow_p: 3
+      r_elbow_y: 3
+      head_y: 2
     default_position: *defult_init_pos
     decimation: 10
     target_pos_filter: *default_target_pos_filter
-    # safety_clamp:
-    #   knee_min: -0.08
-    #   knee_max: 2.45
-    #   waist_y_min: -0.45
-    #   waist_y_max: 0.95
-    #   hip_roll_abs: 1.30
-    #   hip_yaw_abs: 1.25
-    #   ankle_pitch_min: -0.95
-    #   ankle_pitch_max: 0.70
-    #   ankle_roll_abs: 0.90
+    safety_clamp:
+      ankle_roll_abs: 0.28
     inference:
       policy_type: "BeyondMimic"
-      # model_path: "/home/huahui/zzy/robot_control/mujoco_human_v2/checkpoint/efc/policy_bydm_24000.onnx"
-      model_path: "/home/huahui/zzy/robot_control/mujoco_human_v2/checkpoint/efc/policy_getup_28001.onnx"
+      model_path: "/home/huahui/zzy/robot_control/mujoco_human_v2/checkpoint/efc/policy_getup_24000.onnx"
       device: "CPU"
       control_period: 0.02
       use_absolute_clock: true
       auto_start: true
       startup_blend_time: 0.0
       startup_timestep_offset: 0
-      finish_margin: 20
-      # traj_length: 1600
+      # offset: keep old fixed startup_timestep_offset behavior.
+      # joint_nearest: choose nearest reference frame once when entering getup.
+      startup_match_mode: "offset"
+      startup_match_stride: 1
+      startup_match_min_timestep: 0
+      startup_match_max_timestep: 80
+      startup_match_joint_weight: 1.0
+      startup_match_orientation_weight: 0.6
+      trajectory_time_scale: 1.0
+      finish_margin: 25
+      traj_length: 249
       obs_buffer_size: 1
       log_data: 1
       log_dir: "/home/huahui/zzy/robot_control/mujoco_human_v2/log/policy"
@@ -677,55 +665,34 @@ RobotConfig:
         - "r_ankle_r"
         - "l_elbow_y"
         - "r_elbow_y"
-      # policy_default_position:
-      #   l_hip_p: -0.25
-      #   r_hip_p: -0.25
-      #   waist_y: 0
-      #   l_hip_r: 0
-      #   r_hip_r: 0
-      #   l_shoulder_p: 0.3
-      #   r_shoulder_p: 0.3
-      #   l_hip_y: 0
-      #   r_hip_y: 0
-      #   l_shoulder_r: 0.1
-      #   r_shoulder_r: -0.1
-      #   l_knee: 0.5
-      #   r_knee: 0.5
-      #   l_shoulder_y: 0
-      #   r_shoulder_y: 0
-      #   l_ankle_p: -0.25
-      #   r_ankle_p: -0.25
-      #   l_elbow_p: -0.8
-      #   r_elbow_p: -0.8
-      #   l_ankle_r: 0
-      #   r_ankle_r: 0
-      #   l_elbow_y: 0
-      #   r_elbow_y: 0
       policy_default_position:
         l_hip_p: -0.3
-        r_hip_p: -0.3
-        waist_y: 0.0
         l_hip_r: 0.0
-        r_hip_r: 0.0
-        l_shoulder_p: 0.3
-        r_shoulder_p: 0.3
         l_hip_y: 0.0
-        r_hip_y: 0.0
-        l_shoulder_r: 0.1
-        r_shoulder_r: -0.1
         l_knee: 0.6
-        r_knee: 0.6
-        l_shoulder_y: 0.0
-        r_shoulder_y: 0.0
         l_ankle_p: -0.3
-        r_ankle_p: -0.3
-        l_elbow_p: -0.8
-        r_elbow_p: -0.8
         l_ankle_r: 0.0
+        r_hip_p: -0.3
+        r_hip_r: 0.0
+        r_hip_y: 0.0
+        r_knee: 0.6
+        r_ankle_p: -0.3
         r_ankle_r: 0.0
+        waist_y: 0.0
+        l_shoulder_p: 0.3
+        l_shoulder_r: 0.1
+        l_shoulder_y: 0.0
+        l_elbow_p: -0.8
         l_elbow_y: 0.0
+        r_shoulder_p: 0.3
+        r_shoulder_r: -0.1
+        r_shoulder_y: 0.0
+        r_elbow_p: -0.8
         r_elbow_y: 0.0
+        head_y: 0.0
 
+
+      
   # policy_robust:
   #   controller_type: "AUTO"
   #   p_gains:
@@ -874,42 +841,42 @@ RobotConfig:
       r_ankle_p: 30
       r_ankle_r: 30
       waist_y: 200
-      l_shoulder_p: 30
-      l_shoulder_r: 20
-      l_shoulder_y: 10
-      l_elbow_p: 10
-      l_elbow_y: 10
-      r_shoulder_p: 30
-      r_shoulder_r: 20
-      r_shoulder_y: 10
-      r_elbow_p: 10
-      r_elbow_y: 10
-      head_y: 30
+      l_shoulder_p: 45
+      l_shoulder_r: 35
+      l_shoulder_y: 25
+      l_elbow_p: 30
+      l_elbow_y: 25
+      r_shoulder_p: 45
+      r_shoulder_r: 35
+      r_shoulder_y: 25
+      r_elbow_p: 30
+      r_elbow_y: 25
+      head_y: 10
     d_gains:
-      l_hip_p: 1.5
-      l_hip_r: 1.5
-      l_hip_y: 1.5
-      l_knee: 1.5
-      l_ankle_p: 1.0
-      l_ankle_r: 1.0
-      r_hip_p: 1.5
-      r_hip_r: 1.5
-      r_hip_y: 1.5
-      r_knee: 1.5
-      r_ankle_p: 1.0
-      r_ankle_r: 1.0
-      waist_y: 2.0
-      l_shoulder_p: 1.0
-      l_shoulder_r: 1.0
-      l_shoulder_y: 1.0
-      l_elbow_p: 1.0
-      l_elbow_y: 1.0
-      r_shoulder_p: 1.0
-      r_shoulder_r: 1.0
-      r_shoulder_y: 1.0
-      r_elbow_p: 1.0
-      r_elbow_y: 1.0
-      head_y: 1.0
+      l_hip_p: 3
+      l_hip_r: 3
+      l_hip_y: 3
+      l_knee: 3
+      l_ankle_p: 2
+      l_ankle_r: 2
+      r_hip_p: 3
+      r_hip_r: 3
+      r_hip_y: 3
+      r_knee: 3
+      r_ankle_p: 2
+      r_ankle_r: 2
+      waist_y: 3
+      l_shoulder_p: 3
+      l_shoulder_r: 3
+      l_shoulder_y: 3
+      l_elbow_p: 3
+      l_elbow_y: 3
+      r_shoulder_p: 3
+      r_shoulder_r: 3
+      r_shoulder_y: 3
+      r_elbow_p: 3
+      r_elbow_y: 3
+      head_y: 2
     default_position: *defult_init_pos
     decimation: 5
     target_pos_filter: *default_target_pos_filter
@@ -970,30 +937,31 @@ RobotConfig:
         - "r_elbow_p"
       policy_default_position:
         l_hip_p: -0.3
-        l_hip_r: 0
-        l_hip_y: 0
+        l_hip_r: 0.0
+        l_hip_y: 0.0
         l_knee: 0.6
         l_ankle_p: -0.3
-        l_ankle_r: 0
+        l_ankle_r: 0.0
         r_hip_p: -0.3
-        r_hip_r: 0
-        r_hip_y: 0
+        r_hip_r: 0.0
+        r_hip_y: 0.0
         r_knee: 0.6
         r_ankle_p: -0.3
-        r_ankle_r: 0
-        waist_y: 0
+        r_ankle_r: 0.0
+        waist_y: 0.0
         l_shoulder_p: 0.3
         l_shoulder_r: 0.1
-        l_shoulder_y: 0
+        l_shoulder_y: 0.0
         l_elbow_p: -0.8
-        l_elbow_y: 0
+        l_elbow_y: 0.0
         r_shoulder_p: 0.3
         r_shoulder_r: -0.1
-        r_shoulder_y: 0
+        r_shoulder_y: 0.0
         r_elbow_p: -0.8
-        r_elbow_y: 0
-        head_y: 0
+        r_elbow_y: 0.0
+        head_y: 0.0
 
+        
   # policy_robust:
   #   controller_type: "LEG_WAIST"
   #   p_gains:

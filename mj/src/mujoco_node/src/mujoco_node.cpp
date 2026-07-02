@@ -833,7 +833,8 @@ int main(int argc, char* argv[])
     // 使用huahui_v1d2场景（包含机器人模型和场景环境）
     // 使用相对路径（相对于mujoco_node目录）
     // 启动脚本会切换到mujoco_node目录，所以可以使用相对路径
-    const char* filename = "/home/huahui/zzy/robot_control/mujoco_human_v2/mj/src/mujoco_node/models/humanoid/scene.xml";
+    // const char* filename = "/home/huahui/zzy/robot_control/mujoco_human_v2/mj/src/mujoco_node/models/humanoid/scene.xml";
+    const char* filename = "/home/huahui/zzy/robot_control/mujoco_human_v2/mj/src/mujoco_node/models/humanoid_host_collision/scene.xml";
 
     // start physics thread
     std::thread physicsthreadhandle(&PhysicsThread, sim.get(), filename);

@@ -3,7 +3,8 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-70}"
+# Configure the ROS 2 domain for this simulation stack here.
+export ROS_DOMAIN_ID=70
 export ROS_LOG_DIR="${ROS_LOG_DIR:-${SCRIPT_DIR}/log/ros}"
 export LD_LIBRARY_PATH="${SCRIPT_DIR}/build:${SCRIPT_DIR}/mj/install/custom_msgs/lib:${SCRIPT_DIR}/mj/src/custom_msgs/install/custom_msgs/lib:${SCRIPT_DIR}/mj/install/mujoco_node/lib:${SCRIPT_DIR}/mj/src/mujoco_node/install/mujoco_node/lib:/opt/ros/humble/lib:${LD_LIBRARY_PATH:-}"
 

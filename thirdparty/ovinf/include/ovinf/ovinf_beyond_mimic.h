@@ -7,6 +7,7 @@
 #include <Eigen/Geometry>
 #include <atomic>
 #include <chrono>
+#include <limits>
 #include <map>
 #include <openvino/openvino.hpp>
 #include <optional>
@@ -69,8 +70,10 @@ class BeyondMimicPolicy : public BasePolicy<float> {
 
   bool IsTrajectoryFinished(size_t margin = 2) const;
   float CurrentTimestep() const { return timestep_input_; }
+  void ResetTrajectoryState();
 
  private:
+  size_t SelectStartupTimestep(RobotObservation<float> const &obs_pack);
   void WorkerThread();
   void CreateLog(YAML::Node const &config);
   void WriteLog(RobotObservation<float> const &obs_pack);
@@ -102,11 +105,19 @@ class BeyondMimicPolicy : public BasePolicy<float> {
   float clip_action_;
   bool auto_start_ = false;
   size_t startup_timestep_offset_ = 0;
-
+  std::string startup_match_mode_ = "offset";
+  size_t startup_match_stride_ = 2;
+  size_t startup_match_min_timestep_ = 0;
+  size_t startup_match_max_timestep_ = std::numeric_limits<size_t>::max();
+  float startup_match_joint_weight_ = 1.0f;
+  float startup_match_orientation_weight_ = 0.0f;
+  float trajectory_time_scale_ = 1.0f;
+  size_t anchor_body_index_ = 7;
   // Reference trajectory
   std::atomic_bool dancing_started_{false};
   size_t traj_length_ = 0;
   float timestep_input_ = 0.0;
+  float motion_phase_input_ = 0.0f;
   VectorT ref_joint_pos_;
   VectorT ref_joint_vel_;
   QuaternionT ref_base_quat_;

@@ -199,6 +199,7 @@ ROS_DOMAIN_ID=70 ros2 topic pub /robot_action std_msgs/msg/Int32 "{data: 1}" --o
 | 6 | `EnableWaveGreeting` | 切到挥手动作。 |
 | 7 | `EnableHandshakePolicy` | 切到握手动作。 |
 | 8 | `EnableBeyondMimicPolicy` | 切到 bydmimic / BeyondMimic 跳舞策略。 |
+| 9 | `EnableHeadSurveyPolicy` | 切到头部左右巡视动作。 |
 
 也可以继续使用 backend 键盘/事件映射，具体看 `config/backend.json` 和 `user_func.hpp` 中注册的事件。
 
